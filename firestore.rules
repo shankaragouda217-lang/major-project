@@ -1,0 +1,182 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: users
+// Document ID: {userId}
+// Fields:
+//   - uid: string (required)
+//   - email: string (required, email format)
+//   - displayName: string (optional)
+//   - settings: map (optional)
+//     - darkMode: boolean
+//     - notifications: boolean
+//
+// Collection: users/{userId}/plants
+// Document ID: {plantId}
+// Fields:
+//   - id: string (required)
+//   - name: string (required)
+//   - type: string (required)
+//   - datePlanted: string (required, ISO date)
+//   - imageUrl: string (optional)
+//   - lastAnalysis: map (optional)
+//     - status: string
+//     - timestamp: string
+//   - sensors: map (optional)
+//     - moisture: number
+//     - temperature: number
+//     - humidity: number
+//     - light: number
+//
+// Collection: users/{userId}/expenses
+// Document ID: {expenseId}
+// Fields:
+//   - id: string (required)
+//   - userId: string (required)
+//   - category: string (required, enum)
+//   - amount: number (required)
+//   - date: string (required, ISO date)
+//   - description: string (optional)
+//   - quantity: number (optional)
+//   - unit: string (optional)
+//
+// Collection: users/{userId}/history
+// Document ID: {historyId}
+// Fields:
+//   - type: string (required, enum)
+//   - title: string (required)
+//   - details: string (optional)
+//   - image: string (optional)
+//   - timestamp: string (required, ISO date)
+//
+// Collection: community_posts
+// Document ID: {postId}
+// Fields:
+//   - id: string (required)
+//   - authorId: string (required)
+//   - authorName: string (required)
+//   - title: string (required)
+//   - content: string (required)
+//   - type: string (required, enum)
+//   - imageUrl: string (optional)
+//   - createdAt: string (required, ISO date)
+//   - location: string (optional)
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidDateString(dateStr) {
+      return dateStr is string && dateStr.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$");
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email']) &&
+             data.uid == request.auth.uid &&
+             isValidEmail(data.email) &&
+             (!('displayName' in data) || (data.displayName is string && data.displayName.size() < 100)) &&
+             (!('settings' in data) || (data.settings is map));
+    }
+
+    function isValidPlant(data) {
+      return data.keys().hasAll(['id', 'name', 'type', 'datePlanted']) &&
+             data.id is string &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.type is string &&
+             isValidDateString(data.datePlanted) &&
+             (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() < 2000)) &&
+             (!('sensors' in data) || (data.sensors is map)) &&
+             (!('lastAnalysis' in data) || (data.lastAnalysis is map));
+    }
+
+    function isValidPost(data) {
+      return data.keys().hasAll(['id', 'authorId', 'authorName', 'title', 'content', 'type', 'createdAt']) &&
+             data.id is string &&
+             data.authorId == request.auth.uid &&
+             data.authorName is string && data.authorName.size() > 0 &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.content is string && data.content.size() > 0 && data.content.size() < 5000 &&
+             data.type in ['seed_swap', 'harvest_share', 'general'] &&
+             isValidDateString(data.createdAt);
+    }
+
+    function isValidExpense(data) {
+      return data.keys().hasAll(['id', 'userId', 'category', 'amount', 'date']) &&
+             data.id is string &&
+             data.userId == request.auth.uid &&
+             data.category in ['water', 'fertilizer', 'soil', 'seeds', 'tools', 'other'] &&
+             data.amount is number && data.amount >= 0 &&
+             isValidDateString(data.date);
+    }
+
+    function isValidHistory(data) {
+      return data.keys().hasAll(['type', 'title', 'timestamp']) &&
+             data.type in ['search', 'analysis', 'growth_log', 'growth_search'] &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             isValidDateString(data.timestamp) &&
+             (!('details' in data) || (data.details is string && data.details.size() < 5000)) &&
+             (!('image' in data) || (data.image is string && data.image.size() < 1000000));
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data);
+      
+      match /plants/{plantId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidPlant(request.resource.data);
+        allow update: if isOwner(userId) && isValidPlant(request.resource.data);
+        allow delete: if isOwner(userId);
+      }
+
+      match /expenses/{expenseId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidExpense(request.resource.data);
+        allow update: if isOwner(userId) && isValidExpense(request.resource.data);
+        allow delete: if isOwner(userId);
+      }
+
+      match /history/{historyId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidHistory(request.resource.data);
+        allow update: if isOwner(userId) && isValidHistory(request.resource.data);
+        allow delete: if isOwner(userId);
+      }
+    }
+
+    match /community_posts/{postId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidPost(request.resource.data);
+      allow update: if isAuthenticated() && request.auth.uid == resource.data.authorId && isValidPost(request.resource.data);
+      allow delete: if isAuthenticated() && request.auth.uid == resource.data.authorId;
+    }
+  }
+}

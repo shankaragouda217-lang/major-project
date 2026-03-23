@@ -1,0 +1,120 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and settings",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "settings": {
+          "type": "object",
+          "properties": {
+            "darkMode": { "type": "boolean" },
+            "notifications": { "type": "boolean" }
+          }
+        }
+      },
+      "required": ["uid", "email"]
+    },
+    "Plant": {
+      "title": "Plant",
+      "description": "A plant being tracked by the user",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string" },
+        "datePlanted": { "type": "string", "format": "date-time" },
+        "imageUrl": { "type": "string" },
+        "lastAnalysis": {
+          "type": "object",
+          "properties": {
+            "status": { "type": "string" },
+            "timestamp": { "type": "string", "format": "date-time" }
+          }
+        },
+        "sensors": {
+          "type": "object",
+          "properties": {
+            "moisture": { "type": "number" },
+            "temperature": { "type": "number" },
+            "humidity": { "type": "number" },
+            "light": { "type": "number" }
+          }
+        }
+      },
+      "required": ["id", "name", "type", "datePlanted"]
+    },
+    "Post": {
+      "title": "Post",
+      "description": "A community post for seed swap or harvest sharing",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "type": { "type": "string", "enum": ["seed_swap", "harvest_share", "general"] },
+        "imageUrl": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "location": { "type": "string" }
+      },
+      "required": ["id", "authorId", "authorName", "title", "content", "type", "createdAt"]
+    },
+    "Expense": {
+      "title": "Expense",
+      "description": "A resource or expense log for the garden",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "category": { "type": "string", "enum": ["water", "fertilizer", "soil", "seeds", "tools", "other"] },
+        "amount": { "type": "number" },
+        "date": { "type": "string", "format": "date-time" },
+        "description": { "type": "string" },
+        "quantity": { "type": "number" },
+        "unit": { "type": "string" }
+      },
+      "required": ["id", "userId", "category", "amount", "date"]
+    },
+    "History": {
+      "title": "History",
+      "description": "A log of user actions like searches and analyses",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["search", "analysis", "growth_log", "growth_search"] },
+        "title": { "type": "string" },
+        "details": { "type": "string" },
+        "image": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["type", "title", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile documents"
+    },
+    "/users/{userId}/plants/{plantId}": {
+      "schema": "Plant",
+      "description": "Plants belonging to a specific user"
+    },
+    "/community_posts/{postId}": {
+      "schema": "Post",
+      "description": "Global community posts for seed swap and sharing"
+    },
+    "/users/{userId}/expenses/{expenseId}": {
+      "schema": "Expense",
+      "description": "Expenses logged by a specific user"
+    },
+    "/users/{userId}/history/{historyId}": {
+      "schema": "History",
+      "description": "User activity history"
+    }
+  }
+}
