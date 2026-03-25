@@ -1,5 +1,6 @@
-import { Grid, Camera, Frame, Leaf, ShoppingBag, Settings } from 'lucide-react';
+import { Grid, Camera, Frame, Leaf, Users, Settings } from 'lucide-react';
 import { useApp } from '../AppContext';
+import { motion } from 'motion/react';
 
 export default function Navigation({ current, onNavigate }: { current: string, onNavigate: (s: any) => void }) {
   const { t } = useApp();
@@ -8,12 +9,12 @@ export default function Navigation({ current, onNavigate }: { current: string, o
     { id: 'disease', icon: Camera, label: t('nav_scan') },
     { id: 'balcony', icon: Frame, label: t('nav_balcony') },
     { id: 'growth', icon: Leaf, label: t('nav_track') },
-    { id: 'community', icon: ShoppingBag, label: t('nav_order') },
+    { id: 'community', icon: Users, label: t('nav_community') },
     { id: 'settings', icon: Settings, label: t('nav_settings') },
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-zinc-100 px-4 py-2 flex justify-around items-center z-50 max-w-md mx-auto">
+    <nav className="bg-white/90 backdrop-blur-2xl border border-zinc-200/50 rounded-3xl px-1 py-1.5 flex justify-between items-center shadow-[0_20px_50px_rgba(0,0,0,0.15)]">
       {items.map((item) => {
         const Icon = item.icon;
         const isActive = current === item.id;
@@ -21,12 +22,17 @@ export default function Navigation({ current, onNavigate }: { current: string, o
           <button
             key={item.id}
             onClick={() => onNavigate(item.id)}
-            className={`flex flex-col items-center p-2 transition-all ${isActive ? 'text-emerald-600' : 'text-zinc-400'}`}
+            className={`flex-1 flex flex-col items-center px-1 py-1 transition-all relative ${isActive ? 'text-emerald-600' : 'text-zinc-400 hover:text-zinc-600'}`}
           >
-            <div className={`p-1 rounded-xl transition-all ${isActive ? 'bg-emerald-50' : ''}`}>
-              <Icon size={24} />
-            </div>
-            <span className="text-[10px] font-bold mt-1 uppercase tracking-tighter">{item.label}</span>
+            {isActive && (
+              <motion.div 
+                layoutId="nav-active"
+                className="absolute inset-0 bg-emerald-50 rounded-2xl -z-10"
+                transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+              />
+            )}
+            <Icon size={18} strokeWidth={isActive ? 2.5 : 2} />
+            <span className={`text-[7px] font-black mt-1 uppercase tracking-wider text-center ${isActive ? 'opacity-100' : 'opacity-60'}`}>{item.label}</span>
           </button>
         );
       })}

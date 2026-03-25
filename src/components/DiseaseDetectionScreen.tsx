@@ -1,16 +1,18 @@
 import { useState, useRef, useEffect } from 'react';
-import { Camera, Upload, Search, CheckCircle, AlertCircle, Plus, Sparkles, Info, Loader2, X, RefreshCw } from 'lucide-react';
+import { Camera, Upload, Search, CheckCircle, AlertCircle, Plus, Sparkles, Info, Loader2, X, RefreshCw, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useApp } from '../AppContext';
 import { analyzePlantDisease } from '../services/geminiService';
 import { PlantAnalysisResult } from '../types';
 
 export default function DiseaseDetectionScreen() {
-  const { sensors, addToHistory, t, reportInfection } = useApp();
+  const { sensors, addToHistory, t, reportInfection, currentLanguage, submitFeedback } = useApp();
   const [image, setImage] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
-  const [result, setResult] = useState<PlantAnalysisResult | null>(null);
+  const [result, setResult] = useState<any | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+  const [analysisId, setAnalysisId] = useState<string | null>(null);
   const [isReported, setIsReported] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -44,7 +46,7 @@ export default function DiseaseDetectionScreen() {
       setError(null);
     } catch (err) {
       console.error("Error accessing camera:", err);
-      setError("Could not access camera. Please check permissions or use the Gallery option.");
+      setError(t('camera_error'));
       // Fallback to file input if camera fails
       cameraInputRef.current?.click();
     }
@@ -80,6 +82,7 @@ export default function DiseaseDetectionScreen() {
       case 'Beneficial Insects Found':
         return 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-900/30 text-emerald-600 dark:text-emerald-400';
       case 'Pest Infestation':
+      case 'Infected':
         return 'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-900/30 text-red-600 dark:text-red-400';
       default:
         return 'bg-orange-50 dark:bg-orange-900/20 border-orange-100 dark:border-orange-900/30 text-orange-600 dark:text-orange-400';
@@ -92,6 +95,7 @@ export default function DiseaseDetectionScreen() {
       case 'Beneficial Insects Found':
         return 'bg-emerald-600 text-white';
       case 'Pest Infestation':
+      case 'Infected':
         return 'bg-red-600 text-white';
       default:
         return 'bg-orange-600 text-white';
@@ -102,7 +106,7 @@ export default function DiseaseDetectionScreen() {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-        setError('Image too large. Please select an image under 5MB.');
+        setError(t('image_too_large'));
         return;
       }
 
@@ -115,7 +119,7 @@ export default function DiseaseDetectionScreen() {
         setAnalyzing(false);
       };
       reader.onerror = () => {
-        setError('Error reading file');
+        setError(t('error_reading_file'));
         setAnalyzing(false);
       };
       reader.readAsDataURL(file);
@@ -128,26 +132,44 @@ export default function DiseaseDetectionScreen() {
     setResult(null);
     setError(null);
     setIsReported(false);
+    setFeedbackSubmitted(false);
     try {
-      const analysis = await analyzePlantDisease(image, sensors);
+      const analysis = await analyzePlantDisease(image, sensors, currentLanguage);
+      
+      // If description is an error key, translate it
+      if (analysis.description.startsWith('ai_error_')) {
+        setError(t(analysis.description as any));
+        setAnalyzing(false);
+        return;
+      }
+
       setResult(analysis);
+      const newAnalysisId = `analysis_${Date.now()}`;
+      setAnalysisId(newAnalysisId);
+
       try {
-        console.log("Saving analysis to history...");
         await addToHistory({ 
           type: 'analysis', 
           title: `Disease Scan: ${analysis.plantName}`, 
           details: `${analysis.status} - ${analysis.description}`,
           image: image 
         });
-        console.log("Analysis saved to history.");
       } catch (historyErr) {
         console.error("Failed to save analysis to history:", historyErr);
       }
     } catch (err: any) {
       console.error("Analysis Error:", err);
-      setError(`Analysis failed: ${err.message || 'Unknown error'}`);
+      const errorMsg = err.message?.startsWith('ai_error_') ? t(err.message) : (err.message || t('unknown_error'));
+      setError(`${t('analysis_failed')}: ${errorMsg}`);
     } finally {
       setAnalyzing(false);
+    }
+  };
+
+  const handleFeedback = async (worked: boolean) => {
+    if (analysisId) {
+      await submitFeedback(analysisId, worked);
+      setFeedbackSubmitted(true);
     }
   };
 
@@ -168,8 +190,8 @@ export default function DiseaseDetectionScreen() {
 
   return (
     <div className="p-6 pb-24">
-      <h2 className="text-2xl font-bold text-emerald-900 mb-2">AI Vision Scanner</h2>
-      <p className="text-zinc-500 mb-8">Identify plants, diseases, and beneficial or pest insects instantly.</p>
+      <h2 className="text-2xl font-bold text-emerald-900 mb-2">{t('disease_scanner_title')}</h2>
+      <p className="text-zinc-500 mb-8">{t('disease_scanner_desc')}</p>
 
       <div className="aspect-square w-full bg-zinc-100 rounded-3xl border-2 border-dashed border-zinc-300 flex flex-col items-center justify-center overflow-hidden relative mb-6 shadow-inner">
         {isLiveCamera ? (
@@ -204,11 +226,11 @@ export default function DiseaseDetectionScreen() {
             
             {/* Floating Result Cards */}
             {result && !analyzing && (
-              <div className="absolute inset-0 p-4 pointer-events-none">
+              <div className="absolute inset-0 p-4 pointer-events-none flex flex-col gap-2 items-start overflow-y-auto max-h-full scrollbar-hide">
                 <motion.div 
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  className="absolute top-10 left-4 bg-white/90 backdrop-blur-md p-3 rounded-2xl shadow-xl border border-white/50 max-w-[200px] pointer-events-auto"
+                  className="bg-white/90 backdrop-blur-md p-3 rounded-2xl shadow-xl border border-white/50 max-w-[220px] pointer-events-auto"
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <AlertCircle size={16} className="text-orange-500" />
@@ -221,26 +243,26 @@ export default function DiseaseDetectionScreen() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.2 }}
-                  className="absolute top-32 left-8 bg-white/90 backdrop-blur-md p-3 rounded-2xl shadow-xl border border-white/50 max-w-[200px] pointer-events-auto"
+                  className="bg-white/90 backdrop-blur-md p-3 rounded-2xl shadow-xl border border-white/50 max-w-[220px] pointer-events-auto"
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <Search size={16} className="text-emerald-500" />
                     <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">{t('symptoms')}</span>
                   </div>
-                  <p className="text-xs font-medium text-zinc-700">{result.symptoms}</p>
+                  <p className="text-xs font-medium text-zinc-700 leading-tight">{result.symptoms}</p>
                 </motion.div>
 
                 <motion.div 
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.4 }}
-                  className="absolute top-56 left-12 bg-white/90 backdrop-blur-md p-3 rounded-2xl shadow-xl border border-white/50 max-w-[200px] pointer-events-auto"
+                  className="bg-white/90 backdrop-blur-md p-3 rounded-2xl shadow-xl border border-white/50 max-w-[220px] pointer-events-auto"
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <RefreshCw size={16} className="text-blue-500" />
                     <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">{t('treatment')}</span>
                   </div>
-                  <p className="text-xs font-medium text-zinc-700">{result.treatment}</p>
+                  <p className="text-xs font-medium text-zinc-700 leading-tight">{result.treatment}</p>
                 </motion.div>
               </div>
             )}
@@ -261,8 +283,8 @@ export default function DiseaseDetectionScreen() {
               <div className="w-16 h-16 bg-zinc-200 rounded-full flex items-center justify-center mb-3">
                 <Plus size={32} className="text-zinc-500" />
               </div>
-              <p className="font-bold text-zinc-500">Tap to Capture or Upload</p>
-              <p className="text-xs text-zinc-400 mt-1">Camera or Gallery</p>
+              <p className="font-bold text-zinc-500">{t('tap_to_capture')}</p>
+              <p className="text-xs text-zinc-400 mt-1">{t('camera_gallery')}</p>
             </div>
           </button>
         )}
@@ -271,7 +293,7 @@ export default function DiseaseDetectionScreen() {
           <div className="absolute inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center z-20">
             <div className="flex flex-col items-center gap-3">
               <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-emerald-600"></div>
-              <p className="text-emerald-800 font-bold text-sm animate-pulse">AI is analyzing...</p>
+              <p className="text-emerald-800 font-bold text-sm animate-pulse">{t('analyzing')}</p>
             </div>
           </div>
         )}
@@ -299,7 +321,7 @@ export default function DiseaseDetectionScreen() {
           onClick={startCamera}
           className="bg-white border-2 border-emerald-600 text-emerald-600 font-bold py-3.5 rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all"
         >
-          <Camera size={18} /> {isLiveCamera ? 'Restart' : 'Camera'}
+          <Camera size={18} /> {isLiveCamera ? t('restart') : t('camera')}
         </button>
         <button
           onClick={() => {
@@ -308,7 +330,7 @@ export default function DiseaseDetectionScreen() {
           }}
           className="bg-white border-2 border-emerald-600 text-emerald-600 font-bold py-3.5 rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all"
         >
-          <Upload size={18} /> Gallery
+          <Upload size={18} /> {t('gallery')}
         </button>
       </div>
 
@@ -320,10 +342,10 @@ export default function DiseaseDetectionScreen() {
         {analyzing ? (
           <div className="flex items-center gap-2">
             <Loader2 size={20} className="animate-spin" />
-            <span>Analyzing...</span>
+            <span>{t('analyzing')}</span>
           </div>
         ) : (
-          <><Search size={20} /> Analyze Plant</>
+          <><Search size={20} /> {t('analyze_plant')}</>
         )}
       </button>
 
@@ -341,72 +363,183 @@ export default function DiseaseDetectionScreen() {
           className="space-y-6"
         >
           {/* Main Result Card */}
-          <div className={`p-6 rounded-3xl border-2 ${getStatusColor(result.status)}`}>
+          <div className={`p-6 rounded-3xl border-2 ${getStatusColor(result.status)} shadow-sm relative overflow-hidden`}>
+            {result.confidence && (
+              <div className="absolute top-6 right-6 flex flex-col items-end">
+                <span className="text-[8px] font-black uppercase tracking-widest text-zinc-400 mb-1">{t('confidence')}</span>
+                <span className="text-lg font-black text-emerald-600">{Math.round(result.confidence * 100)}%</span>
+              </div>
+            )}
             <div className="flex items-start justify-between mb-4">
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1 block">AI Analysis Result</span>
-                <h3 className="text-2xl font-bold text-zinc-900">{result.plantName}</h3>
-              </div>
-              <div className={`p-2 rounded-xl bg-white/50`}>
-                {result.status === 'Healthy' || result.status === 'Beneficial Insects Found' ? <CheckCircle size={24} /> : <AlertCircle size={24} />}
+                <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1 block">{t('analysis_result')}</span>
+                <h3 className="text-2xl font-bold text-zinc-900 leading-tight">{result.plantName}</h3>
               </div>
             </div>
-            
-            <div className="flex items-center gap-2 mb-4">
-              <span className={`px-3 py-1 rounded-full text-xs font-bold ${getBadgeColor(result.status)}`}>
+
+            <div className="flex items-center gap-2 mb-6">
+              <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${getBadgeColor(result.status)}`}>
                 {result.status}
               </span>
-              <span className="text-xs text-zinc-400 font-medium">
-                {Math.round(result.confidence * 100)}% Confidence
-              </span>
             </div>
 
-            <p className="text-zinc-600 text-sm leading-relaxed">
-              {result.description}
-            </p>
-          </div>
-
-          {/* Suggestions Section */}
-          <div className="bg-white p-6 rounded-3xl border-2 border-zinc-100 shadow-sm">
-            <div className="flex items-center gap-2 mb-4">
-              <Sparkles size={20} className="text-emerald-600" />
-              <h4 className="font-bold text-zinc-900">Care Suggestions</h4>
-            </div>
-            <div className="space-y-3 mb-6">
-              {result.suggestions.map((suggestion, idx) => (
-                <div key={idx} className="flex items-start gap-3 group">
-                  <div className="w-6 h-6 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-                    {idx + 1}
-                  </div>
-                  <p className="text-zinc-600 text-sm">{suggestion}</p>
-                </div>
-              ))}
-            </div>
-
-            {/* Report Button */}
-            {result.status !== 'Healthy' && (
-              <button
-                onClick={handleReport}
-                disabled={isReported}
-                className={`w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all ${
-                  isReported 
-                    ? 'bg-zinc-100 text-zinc-400 cursor-default' 
-                    : 'bg-red-50 text-red-600 border-2 border-red-100 hover:bg-red-100'
-                }`}
-              >
-                {isReported ? (
-                  <><CheckCircle size={18} /> Reported to Community</>
-                ) : (
-                  <><AlertCircle size={18} /> Report Infection to Community</>
-                )}
-              </button>
+            {result.why && (
+              <div className="mb-6 p-4 bg-white/50 rounded-2xl border border-white/20">
+                <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">{t('why_diagnosis')}</h4>
+                <p className="text-xs font-medium text-zinc-700 leading-relaxed">{result.why}</p>
+              </div>
             )}
+
+            <div className="grid grid-cols-1 gap-4">
+              <div>
+                <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">{t('symptoms')}</h4>
+                <p className="text-xs font-medium text-zinc-600 leading-relaxed">{result.symptoms}</p>
+              </div>
+              <div>
+                <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">{t('treatment')}</h4>
+                <p className="text-xs font-bold text-zinc-800 leading-relaxed">{result.treatment}</p>
+              </div>
+            </div>
           </div>
 
-          <div className="bg-zinc-50 p-4 rounded-2xl flex items-start gap-3">
-            <Info size={18} className="text-zinc-400 shrink-0 mt-0.5" />
-            <p className="text-[11px] text-zinc-500 leading-tight italic">
-              AI analysis provides confirmed botanical insights based on visual and environmental data.
+          {/* Action Checklist */}
+          {result.checklist && (
+            <div className="bg-white p-6 rounded-[2.5rem] border-2 border-zinc-100 shadow-sm">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 bg-emerald-100 rounded-2xl flex items-center justify-center text-emerald-600">
+                  <Zap size={20} />
+                </div>
+                <h3 className="text-lg font-bold text-zinc-900">{t('action_checklist')}</h3>
+              </div>
+              <div className="space-y-4">
+                {result.checklist.map((item: string, i: number) => (
+                  <div key={i} className="flex items-start gap-4">
+                    <div className="w-5 h-5 rounded-full border-2 border-emerald-200 flex items-center justify-center mt-0.5">
+                      <div className="w-2 h-2 bg-emerald-500 rounded-full" />
+                    </div>
+                    <p className="text-sm font-medium text-zinc-700 leading-relaxed">{item}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Feedback Loop */}
+          <div className="bg-zinc-900 p-8 rounded-[3rem] text-white relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-8 opacity-10">
+              <Sparkles size={80} />
+            </div>
+            <div className="relative z-10">
+              {feedbackSubmitted ? (
+                <div className="text-center py-4">
+                  <div className="w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Sparkles size={24} className="text-white" />
+                  </div>
+                  <h3 className="text-lg font-bold mb-2">{t('feedback_thanks')}</h3>
+                </div>
+              ) : (
+                <>
+                  <h3 className="text-xl font-bold mb-2">{t('did_it_work')}</h3>
+                  <p className="text-zinc-400 text-xs font-medium mb-6 leading-relaxed">
+                    {t('feedback_desc')}
+                  </p>
+                  <div className="flex gap-3">
+                    <button 
+                      onClick={() => handleFeedback(true)}
+                      className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 rounded-2xl transition-all active:scale-95"
+                    >
+                      {t('yes')}
+                    </button>
+                    <button 
+                      onClick={() => handleFeedback(false)}
+                      className="flex-1 bg-white/10 hover:bg-white/20 text-white font-bold py-3.5 rounded-2xl transition-all active:scale-95"
+                    >
+                      {t('no')}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Expert Recommendations Section */}
+          <div className="space-y-4">
+            {/* Fertilizer & Soil Section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {result.fertilizerSuggestion && (
+                <div className="bg-white p-6 rounded-3xl border-2 border-zinc-100 shadow-sm hover:border-emerald-100 transition-colors">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+                      <Sparkles size={20} />
+                    </div>
+                    <h4 className="font-bold text-zinc-900">{t('fertilizer_guide')}</h4>
+                  </div>
+                  <p className="text-zinc-600 text-sm leading-relaxed">
+                    {result.fertilizerSuggestion}
+                  </p>
+                </div>
+              )}
+
+              {result.soilAdvice && (
+                <div className="bg-white p-6 rounded-3xl border-2 border-zinc-100 shadow-sm hover:border-blue-100 transition-colors">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600">
+                      <Info size={20} />
+                    </div>
+                    <h4 className="font-bold text-zinc-900">{t('soil_health')}</h4>
+                  </div>
+                  <p className="text-zinc-600 text-sm leading-relaxed">
+                    {result.soilAdvice}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Suggestions Checklist */}
+            <div className="bg-zinc-900 p-6 rounded-3xl shadow-xl">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center text-emerald-400">
+                  <CheckCircle size={20} />
+                </div>
+                <h4 className="font-bold text-white">{t('action_checklist')}</h4>
+              </div>
+              <div className="space-y-4">
+                {result.suggestions.map((suggestion, idx) => (
+                  <div key={idx} className="flex items-start gap-4 group">
+                    <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-[10px] font-black shrink-0 mt-0.5 border border-emerald-500/30">
+                      {idx + 1}
+                    </div>
+                    <p className="text-zinc-300 text-sm leading-snug font-medium">{suggestion}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Report Button */}
+          {result.status !== 'Healthy' && (
+            <button
+              onClick={handleReport}
+              disabled={isReported}
+              className={`w-full py-5 rounded-3xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 transition-all shadow-lg active:scale-[0.98] ${
+                isReported 
+                  ? 'bg-zinc-100 text-zinc-400 cursor-default border-2 border-zinc-200' 
+                  : 'bg-red-600 text-white hover:bg-red-700 shadow-red-200'
+              }`}
+            >
+              {isReported ? (
+                <><CheckCircle size={18} /> {t('reported_to_community')}</>
+              ) : (
+                <><AlertCircle size={18} /> {t('alert_community')}</>
+              )}
+            </button>
+          )}
+
+          <div className="bg-zinc-50 p-5 rounded-3xl flex items-start gap-4 border border-zinc-100">
+            <Info size={20} className="text-zinc-400 shrink-0 mt-0.5" />
+            <p className="text-[11px] text-zinc-500 leading-relaxed font-medium">
+              <span className="font-black uppercase tracking-tighter mr-1">{t('note')}:</span>
+              {t('ai_note')}
             </p>
           </div>
         </motion.div>

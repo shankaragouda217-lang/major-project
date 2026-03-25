@@ -7,12 +7,17 @@ import { getGrowthSuggestions, analyzeGrowthFromImage } from '../services/gemini
 const COMMON_PLANTS = ['Tulsi', 'Chilli', 'Tomato', 'Curry Leaves', 'Bhindi', 'Palak', 'Marigold', 'Aloe Vera'];
 
 export default function GrowthTrackerScreen() {
-  const { addToHistory, history, deleteHistoryItem, deleteMultipleHistoryItems, clearHistory } = useApp();
+  const { addToHistory, history, deleteHistoryItem, deleteMultipleHistoryItems, clearHistory, currentLanguage, t } = useApp();
   const [plantName, setPlantName] = useState('');
-  const [harvestDays, setHarvestDays] = useState(80);
-  const [daysPlanted, setDaysPlanted] = useState(0);
+  const [harvestDays, setHarvestDays] = useState<number | string>('');
+  const [daysPlanted, setDaysPlanted] = useState<number | string>('');
   const [plantImage, setPlantImage] = useState<string | null>(null);
-  const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
+  const [aiAdvice, setAiAdvice] = useState<{
+    stage?: string;
+    fertilizer?: string;
+    watering?: string;
+    pest?: string;
+  }>({});
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -88,13 +93,25 @@ export default function GrowthTrackerScreen() {
     }
   };
 
-  const progress = Math.min(100, (daysPlanted / harvestDays) * 100);
-  const daysLeft = Math.max(0, harvestDays - daysPlanted);
+  const progress = useMemo(() => {
+    const d = Number(daysPlanted) || 0;
+    const h = Number(harvestDays) || 1;
+    return Math.min(100, (d / h) * 100);
+  }, [daysPlanted, harvestDays]);
+
+  const daysLeft = useMemo(() => {
+    const d = Number(daysPlanted) || 0;
+    const h = Number(harvestDays) || 0;
+    return Math.max(0, h - d);
+  }, [daysPlanted, harvestDays]);
 
   // Calculate harvest date
-  const harvestDate = new Date();
-  harvestDate.setDate(harvestDate.getDate() + daysLeft);
-  const harvestDateStr = harvestDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const harvestDateStr = useMemo(() => {
+    if (!harvestDays || harvestDays === 0) return 'N/A';
+    const date = new Date();
+    date.setDate(date.getDate() + daysLeft);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }, [daysLeft, harvestDays]);
 
   const filteredHistory = useMemo(() => {
     return history
@@ -122,10 +139,15 @@ export default function GrowthTrackerScreen() {
     setError(null);
     setAnalysisResult(null);
     try {
-      const result = await analyzeGrowthFromImage(imageData, plantName);
+      const result = await analyzeGrowthFromImage(imageData, plantName, currentLanguage);
       setPlantName(result.plantName);
       setHarvestDays(result.estimatedHarvestDays);
-      setAiSuggestions(result.suggestions);
+      setAiAdvice({
+        stage: result.growthStage,
+        fertilizer: result.suggestions[0] || '',
+        watering: result.suggestions[1] || '',
+        pest: result.suggestions[2] || ''
+      });
       setAnalysisResult({
         growthStage: result.growthStage,
         healthStatus: result.healthStatus,
@@ -141,7 +163,8 @@ export default function GrowthTrackerScreen() {
       });
     } catch (err: any) {
       console.error("Growth Analysis Error:", err);
-      setError(`Analysis failed: ${err.message || 'Unknown error'}`);
+      const errorMsg = err.message?.startsWith('ai_error_') ? t(err.message) : (err.message || 'Unknown error');
+      setError(`${t('analysis_failed')}: ${errorMsg}`);
     } finally {
       setIsAnalyzing(false);
     }
@@ -151,30 +174,38 @@ export default function GrowthTrackerScreen() {
     if (!plantName.trim()) return;
     setIsAnalyzing(true);
     try {
-      const result = await getGrowthSuggestions(plantName);
-      setAiSuggestions(result.suggestions);
+      const d = Number(daysPlanted) || 0;
+      const result = await getGrowthSuggestions(plantName, d, currentLanguage);
+      setAiAdvice({
+        stage: result.stageAdvice,
+        fertilizer: result.fertilizerAdvice,
+        watering: result.wateringAdvice,
+        pest: result.pestAdvice
+      });
       setHarvestDays(result.harvestDays);
       
       // Save search to history
       await addToHistory({
         type: 'growth_search',
         title: `Plant Search: ${plantName}`,
-        details: `Harvest Cycle: ${result.harvestDays} days | Suggestions: ${result.suggestions.slice(0, 2).join(', ')}...`
+        details: `Age: ${d} days | Harvest Cycle: ${result.harvestDays} days | Fertilizer: ${result.fertilizerAdvice.substring(0, 50)}...`
       });
     } catch (error) {
       console.error("Failed to get suggestions:", error);
     } finally {
-      setIsAnalyzing(false);
+      setIsAnalyzing(true); // Keep analyzing state for a bit for UI feel
+      setTimeout(() => setIsAnalyzing(false), 500);
     }
   };
 
   const handleSaveHistory = async () => {
     setIsSaving(true);
     try {
+      const d = Number(daysPlanted) || 0;
       await addToHistory({
         type: 'growth_log',
         title: `Growth Log: ${plantName}`,
-        details: `Progress: ${Math.round(progress)}% | Days Left: ${daysLeft} | Suggestions: ${aiSuggestions.join(', ')}`,
+        details: `Age: ${d} days | Progress: ${Math.round(progress)}% | Days Left: ${daysLeft} | Fertilizer: ${aiAdvice.fertilizer?.substring(0, 50)}`,
         image: plantImage || undefined
       });
       setSaveSuccess(true);
@@ -185,6 +216,8 @@ export default function GrowthTrackerScreen() {
       setIsSaving(false);
     }
   };
+
+  const [showPurgeConfirm, setShowPurgeConfirm] = useState(false);
 
   const toggleSelection = (id: string) => {
     setSelectedHistoryItems(prev => 
@@ -200,81 +233,83 @@ export default function GrowthTrackerScreen() {
   };
 
   const handleClearAll = async () => {
-    if (window.confirm("Are you sure you want to clear all growth history?")) {
-      const idsToDelete = filteredHistory.map(item => item.id);
-      if (idsToDelete.length > 0) {
-        await deleteMultipleHistoryItems(idsToDelete);
-      }
+    const idsToDelete = filteredHistory.map(item => item.id);
+    if (idsToDelete.length > 0) {
+      await deleteMultipleHistoryItems(idsToDelete);
     }
   };
 
   return (
-    <div className="p-6 pb-24">
-      <header className="mb-8">
-        <div className="flex justify-between items-start mb-2">
-          <div>
-            <h2 className="text-3xl font-black text-emerald-900 tracking-tighter uppercase">Track Growth</h2>
-            <p className="text-zinc-500 font-medium">Monitor your garden's progress.</p>
+    <div className="p-3 pb-16 max-w-4xl mx-auto">
+      <header className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-100/50 pb-4">
+        <div className="flex-shrink-0">
+          <h1 className="text-xl sm:text-2xl font-black text-emerald-950 tracking-tighter uppercase leading-none mb-1 whitespace-nowrap">
+            {t('track_growth')}
+          </h1>
+          <div className="flex items-center gap-1.5">
+            <div className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse" />
+            <p className="text-zinc-500 font-bold uppercase tracking-widest text-[7px]">{t('ai_cultivation_intelligence')}</p>
           </div>
-          <div className="flex gap-2">
-            <button 
-              onClick={() => document.getElementById('growth-history')?.scrollIntoView({ behavior: 'smooth' })}
-              className="p-3 rounded-2xl bg-zinc-100 text-zinc-600 hover:bg-zinc-200 transition-all flex items-center gap-2"
-            >
-              <HistoryIcon size={20} />
-              <span className="text-xs font-bold">View History</span>
-            </button>
-            <button 
-              onClick={handleSaveHistory}
-              disabled={isSaving}
-              className={`p-3 rounded-2xl flex items-center gap-2 transition-all shadow-sm ${
-                saveSuccess 
-                  ? 'bg-emerald-500 text-white' 
-                  : 'bg-zinc-900 text-white hover:bg-zinc-800'
-              }`}
-            >
-              {isSaving ? <Loader2 className="animate-spin" size={20} /> : saveSuccess ? <CheckCircle2 size={20} /> : <Save size={20} />}
-              <span className="text-xs font-bold">{saveSuccess ? 'Saved' : 'Save Log'}</span>
-            </button>
-          </div>
+        </div>
+        <div className="flex gap-1.5">
+          <button 
+            onClick={() => document.getElementById('growth-history')?.scrollIntoView({ behavior: 'smooth' })}
+            className="px-2.5 py-1.5 rounded-lg bg-zinc-100 text-zinc-600 hover:bg-zinc-200 transition-all flex items-center gap-1.5 border border-zinc-200"
+          >
+            <HistoryIcon size={12} />
+            <span className="text-[8px] font-black uppercase tracking-widest">{t('history')}</span>
+          </button>
         </div>
       </header>
 
-      {/* Main Tracker Dashboard */}
-      <div className="space-y-6 mb-12">
-        <div className="bg-white p-6 rounded-[2.5rem] border-2 border-zinc-100 shadow-sm">
-          <div className="space-y-6">
-            <div>
-              <label className="block text-[10px] font-bold text-zinc-400 uppercase mb-3 tracking-widest">Plant Selection</label>
-              <div className="flex gap-2 mb-4">
-                <div className="relative flex-1">
-                  <Leaf className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-500" size={20} />
-                  <input 
-                    type="text"
-                    value={plantName}
-                    onChange={(e) => setPlantName(e.target.value)}
-                    placeholder="Enter any plant name..."
-                    className="w-full pl-12 pr-4 py-4 bg-zinc-50 rounded-2xl border-2 border-transparent focus:border-emerald-500 focus:bg-white outline-none font-bold text-emerald-800 transition-all"
-                  />
-                </div>
-                <button 
-                  onClick={handleGetSuggestions}
-                  disabled={isAnalyzing}
-                  className="p-4 bg-emerald-600 text-white rounded-2xl hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 active:scale-95"
-                  title="Get AI Suggestions"
-                >
-                  {isAnalyzing ? <Loader2 className="animate-spin" size={24} /> : <Sparkles size={24} />}
-                </button>
+      {/* Main Grid Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-8">
+        {/* Left Column: Input & Documentation */}
+        <div className="lg:col-span-7 space-y-4">
+          <section className="bg-white p-4 rounded-2xl border border-zinc-100 shadow-sm">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-7 h-7 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-600">
+                <Leaf size={16} />
               </div>
-              
-              <div className="flex flex-wrap gap-2">
+              <h3 className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em]">{t('plant_config')}</h3>
+            </div>
+
+            <div className="space-y-3">
+              <div className="relative group">
+                <input 
+                  type="text"
+                  value={plantName}
+                  onChange={(e) => setPlantName(e.target.value)}
+                  placeholder={t('what_growing')}
+                  className="w-full pl-4 pr-12 py-2.5 bg-zinc-50 rounded-xl border-2 border-transparent focus:border-emerald-500 focus:bg-white outline-none font-black text-base text-emerald-950 transition-all placeholder:text-zinc-300"
+                />
+                <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex gap-1">
+                  {plantName && (
+                    <button 
+                      onClick={() => setPlantName('')}
+                      className="p-1.5 text-zinc-300 hover:text-zinc-500 transition-all"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                  <button 
+                    onClick={handleGetSuggestions}
+                    disabled={isAnalyzing || !plantName}
+                    className="p-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-all shadow-sm disabled:opacity-50"
+                  >
+                    {isAnalyzing ? <Loader2 className="animate-spin" size={14} /> : <Sparkles size={14} />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-1">
                 {COMMON_PLANTS.map(p => (
                   <button
                     key={p}
                     onClick={() => setPlantName(p)}
-                    className={`px-3 py-1.5 rounded-full text-[10px] font-bold transition-all ${
+                    className={`px-2 py-0.5 rounded-md text-[7px] font-black uppercase tracking-widest transition-all ${
                       plantName === p 
-                        ? 'bg-emerald-600 text-white' 
+                        ? 'bg-emerald-950 text-white shadow-sm' 
                         : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200'
                     }`}
                   >
@@ -282,357 +317,361 @@ export default function GrowthTrackerScreen() {
                   </button>
                 ))}
               </div>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-zinc-50 p-4 rounded-2xl border border-zinc-100">
-                    <h4 className="text-[10px] font-bold text-zinc-400 uppercase mb-1 tracking-wider">Harvest Cycle</h4>
-                    <div className="flex items-center gap-2">
-                      <input 
-                        type="number" 
-                        value={harvestDays}
-                        onChange={(e) => setHarvestDays(Math.max(1, parseInt(e.target.value) || 1))}
-                        className="w-16 bg-transparent font-black text-2xl text-emerald-900 outline-none"
-                      />
-                      <span className="text-xs font-bold text-zinc-400 uppercase">days</span>
-                    </div>
+              <div className="bg-zinc-50 p-3 rounded-xl border border-zinc-100 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Timer size={14} className="text-emerald-500" />
+                    <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest">{t('growth_progress')}</span>
                   </div>
-                  <div className="bg-zinc-50 p-4 rounded-2xl border border-zinc-100">
-                    <h4 className="text-[10px] font-bold text-zinc-400 uppercase mb-1 tracking-wider">Days Planted</h4>
-                    <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 bg-emerald-100 px-2 py-0.5 rounded-full">
+                    <span className="text-[8px] font-black text-emerald-700 uppercase tracking-widest">{daysLeft} {t('days_left')}</span>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[7px] font-black text-zinc-400 uppercase tracking-widest block">{t('days_planted')}</label>
+                    <div className="flex items-baseline gap-1">
                       <input 
                         type="number" 
                         value={daysPlanted}
-                        onChange={(e) => setDaysPlanted(Math.min(harvestDays, parseInt(e.target.value) || 0))}
-                        className="w-16 bg-transparent font-black text-2xl text-emerald-900 outline-none"
+                        onChange={(e) => setDaysPlanted(e.target.value)}
+                        placeholder=""
+                        className="w-20 bg-white px-2 py-1 rounded-lg border border-zinc-200 font-black text-xl text-emerald-950 outline-none focus:border-emerald-500 transition-all placeholder:text-zinc-200"
                       />
-                      <span className="text-xs font-bold text-zinc-400 uppercase">days</span>
+                      <span className="text-[8px] font-bold text-zinc-400 uppercase">{t('days')}</span>
                     </div>
                   </div>
-                </div>
-
-                <div>
-                  <div className="flex justify-between items-end mb-3">
-                    <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Growth Progress</h4>
-                    <span className="text-3xl font-black text-emerald-600">{Math.round(progress)}%</span>
-                  </div>
-                  <div className="w-full h-8 bg-zinc-100 rounded-full overflow-hidden p-1.5 border border-zinc-50 mb-4">
-                    <motion.div 
-                      initial={{ width: 0 }}
-                      animate={{ width: `${progress}%` }}
-                      className="h-full bg-emerald-500 rounded-full flex items-center justify-end px-2"
-                    >
-                      <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                    </motion.div>
-                  </div>
-                  <input 
-                    type="range" 
-                    min="0" 
-                    max={harvestDays} 
-                    value={daysPlanted}
-                    onChange={(e) => setDaysPlanted(parseInt(e.target.value))}
-                    className="w-full h-2 bg-emerald-100 rounded-lg appearance-none cursor-pointer accent-emerald-600"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Growth Documentation</label>
-                <div className="aspect-video bg-zinc-50 rounded-3xl border-2 border-dashed border-zinc-200 flex flex-col items-center justify-center overflow-hidden relative group transition-all shadow-inner">
-                  {isLiveCamera ? (
-                    <div className="relative w-full h-full bg-black">
-                      <video 
-                        ref={videoRef} 
-                        autoPlay 
-                        playsInline 
-                        className="w-full h-full object-cover"
+                  <div className="space-y-1">
+                    <label className="text-[7px] font-black text-zinc-400 uppercase tracking-widest block">{t('total_cycle')}</label>
+                    <div className="flex items-baseline gap-1">
+                      <input 
+                        type="number" 
+                        value={harvestDays}
+                        onChange={(e) => setHarvestDays(e.target.value)}
+                        placeholder=""
+                        className="w-20 bg-white px-2 py-1 rounded-lg border border-zinc-200 font-black text-xl text-emerald-950 outline-none focus:border-blue-500 transition-all placeholder:text-zinc-200"
                       />
-                      <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-4 px-6">
-                        <button 
-                          onClick={stopCamera}
-                          className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/30"
-                        >
-                          <X size={20} />
-                        </button>
-                        <button 
-                          onClick={capturePhoto}
-                          className="w-14 h-14 bg-white rounded-full flex items-center justify-center text-emerald-600 shadow-xl border-4 border-emerald-100"
-                        >
-                          <div className="w-10 h-10 rounded-full border-2 border-emerald-600 flex items-center justify-center">
-                            <div className="w-6 h-6 bg-emerald-600 rounded-full" />
-                          </div>
-                        </button>
-                        <div className="w-10 h-10" />
-                      </div>
+                      <span className="text-[8px] font-bold text-zinc-400 uppercase">{t('days')}</span>
                     </div>
-                  ) : plantImage ? (
-                    <div className="relative w-full h-full">
-                      <img src={plantImage} alt="Plant" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                      <div className="absolute top-4 right-4 flex gap-2">
-                        <button 
-                          onClick={() => setPlantImage(null)}
-                          className="w-8 h-8 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-white"
-                        >
-                          <X size={16} />
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button 
-                      onClick={() => !isAnalyzing && startCamera()}
-                      className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-zinc-200 transition-colors"
-                    >
-                      <div className="text-center p-6">
-                        <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center text-emerald-500 mx-auto mb-4">
-                          <Camera size={32} />
-                        </div>
-                        <p className="text-sm font-bold text-zinc-600">Capture Growth</p>
-                        <p className="text-[10px] text-zinc-400 mt-1 uppercase font-bold tracking-tighter">Camera or Upload for AI Analysis</p>
-                      </div>
-                    </button>
-                  )}
-                  
-                  {isAnalyzing && (
-                    <div className="absolute inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center z-20">
-                      <div className="flex flex-col items-center gap-3">
-                        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-emerald-600"></div>
-                        <p className="text-emerald-800 font-bold text-sm animate-pulse">AI is analyzing growth...</p>
-                      </div>
-                    </div>
-                  )}
-                  
-                  <canvas ref={canvasRef} className="hidden" />
-                  <input 
-                    type="file" 
-                    ref={fileInputRef} 
-                    onChange={handleImageUpload} 
-                    accept="image/*" 
-                    className="hidden" 
-                  />
-                  <input
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    className="hidden"
-                    ref={cameraInputRef}
-                    onChange={handleImageUpload}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={startCamera}
-                    className="bg-white border-2 border-emerald-600 text-emerald-600 font-bold py-3 rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all text-xs"
-                  >
-                    <Camera size={16} /> {isLiveCamera ? 'Restart' : 'Camera'}
-                  </button>
-                  <button
-                    onClick={() => {
-                      stopCamera();
-                      fileInputRef.current?.click();
-                    }}
-                    className="bg-white border-2 border-emerald-600 text-emerald-600 font-bold py-3 rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all text-xs"
-                  >
-                    <Upload size={16} /> Gallery
-                  </button>
-                </div>
-
-                {error && (
-                  <div className="p-3 bg-red-50 text-red-600 rounded-xl flex items-center gap-2">
-                    <AlertCircle size={16} />
-                    <p className="text-[10px] font-bold">{error}</p>
                   </div>
-                )}
-
-                {analysisResult && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100"
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <h5 className="text-[10px] font-black text-emerald-800 uppercase tracking-widest">AI Growth Analysis</h5>
-                      <span className="text-[9px] font-bold text-emerald-600 bg-white px-2 py-0.5 rounded-full border border-emerald-100">
-                        {Math.round(analysisResult.confidence * 100)}% Confidence
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <p className="text-[9px] font-bold text-emerald-600 uppercase mb-0.5">Stage</p>
-                        <p className="text-xs font-black text-emerald-900">{analysisResult.growthStage}</p>
-                      </div>
-                      <div>
-                        <p className="text-[9px] font-bold text-emerald-600 uppercase mb-0.5">Health</p>
-                        <p className="text-xs font-black text-emerald-900">{analysisResult.healthStatus}</p>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
+                </div>
               </div>
             </div>
-          </div>
+          </section>
+
+          <section className="bg-emerald-950 p-4 rounded-2xl text-white shadow-lg relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full -mr-16 -mt-16 blur-2xl" />
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h4 className="text-[7px] font-black uppercase tracking-[0.2em] text-emerald-500 mb-0.5">{t('growth_status')}</h4>
+                  <p className="text-lg font-black text-white">{Math.round(progress)}% {t('complete')}</p>
+                </div>
+                <div className="w-8 h-8 bg-emerald-500/20 rounded-lg flex items-center justify-center text-emerald-400 border border-emerald-500/30">
+                  <Leaf size={16} />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="h-1.5 bg-white/10 rounded-full overflow-hidden p-0.5">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progress}%` }}
+                    className="h-full bg-emerald-400 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.4)]"
+                  />
+                </div>
+                <div className="grid grid-cols-3 gap-1">
+                  <div className="text-center">
+                    <p className="text-[6px] font-black text-emerald-500 uppercase tracking-widest mb-0.5">{t('planted')}</p>
+                    <p className="text-xs font-black">{daysPlanted}d</p>
+                  </div>
+                  <div className="text-center border-x border-white/10">
+                    <p className="text-[6px] font-black text-emerald-500 uppercase tracking-widest mb-0.5">{t('remaining')}</p>
+                    <p className="text-xs font-black text-emerald-400">{daysLeft}d</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-[6px] font-black text-emerald-500 uppercase tracking-widest mb-0.5">{t('harvest')}</p>
+                    <p className="text-xs font-black">{harvestDateStr.split(',')[0]}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-zinc-900 text-white p-6 rounded-[2.5rem] relative overflow-hidden">
-            <div className="relative z-10">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 bg-emerald-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
-                  <Calendar size={24} />
+        {/* Right Column: AI Insights & Documentation */}
+        <div className="lg:col-span-5 space-y-4">
+          <section className="bg-white p-4 rounded-2xl border border-zinc-100 shadow-sm flex flex-col h-full">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-600">
+                  <Camera size={16} />
                 </div>
-                <div>
-                  <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400">Harvest Prediction</h4>
-                  <p className="text-xl font-black text-emerald-400">{harvestDateStr}</p>
-                </div>
+                <h3 className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em]">{t('visual_log')}</h3>
               </div>
-              <p className="text-xs text-zinc-400 leading-relaxed mb-6">
-                Your {plantName || 'plant'} is expected to reach maturity in <span className="text-white font-bold">{daysLeft} days</span>. This estimate is based on standard growth cycles.
-              </p>
-              <div className="flex items-center gap-2 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 w-fit px-4 py-2 rounded-full border border-emerald-500/20 uppercase tracking-widest">
-                <Sparkles size={12} />
-                AI Optimized Cycle
+              <div className="flex gap-1">
+                <button onClick={startCamera} className="p-1.5 bg-zinc-100 rounded-md text-zinc-600 hover:bg-emerald-100 hover:text-emerald-600 transition-all">
+                  <Camera size={14} />
+                </button>
+                <button onClick={() => fileInputRef.current?.click()} className="p-1.5 bg-zinc-100 rounded-md text-zinc-600 hover:bg-emerald-100 hover:text-emerald-600 transition-all">
+                  <Upload size={14} />
+                </button>
               </div>
             </div>
-          </div>
 
-          <div className="bg-emerald-50 p-6 rounded-[2.5rem] border-2 border-emerald-100 flex flex-col">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 bg-emerald-200 rounded-xl flex items-center justify-center text-emerald-700">
-                <Sparkles size={18} />
-              </div>
-              <h3 className="text-xs font-bold text-emerald-900 uppercase tracking-widest">Growth Suggestions</h3>
-            </div>
-            
-            <div className="flex-1">
-              {aiSuggestions.length > 0 ? (
-                <ul className="space-y-3">
-                  {aiSuggestions.map((suggestion, i) => (
-                    <motion.li 
-                      key={i}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: i * 0.1 }}
-                      className="flex items-start gap-3 bg-white/50 p-3 rounded-2xl border border-emerald-100/50"
-                    >
-                      <div className="mt-1 w-4 h-4 rounded-full bg-emerald-500 flex-shrink-0 flex items-center justify-center">
-                        <CheckCircle2 size={10} className="text-white" />
+            <div className="flex-1 aspect-[4/3] bg-zinc-50 rounded-xl border-2 border-dashed border-zinc-200 overflow-hidden relative group shadow-inner">
+              {isLiveCamera ? (
+                <div className="relative w-full h-full bg-black">
+                  <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                  <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-2 px-3">
+                    <button onClick={stopCamera} className="w-8 h-8 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/30">
+                      <X size={16} />
+                    </button>
+                    <button onClick={capturePhoto} className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-emerald-600 shadow-lg border-2 border-emerald-100">
+                      <div className="w-7 h-7 rounded-full border border-emerald-600 flex items-center justify-center">
+                        <div className="w-4 h-4 bg-emerald-600 rounded-full" />
                       </div>
-                      <p className="text-xs text-emerald-900 font-medium leading-relaxed">{suggestion}</p>
-                    </motion.li>
-                  ))}
-                </ul>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-full text-center py-6">
-                  <p className="text-xs text-emerald-800 font-bold mb-2">Need expert advice?</p>
-                  <p className="text-[10px] text-emerald-600 mb-6 px-4">Get AI-powered care tips tailored to your {plantName}.</p>
-                  <button 
-                    onClick={handleGetSuggestions}
-                    disabled={isAnalyzing}
-                    className="px-6 py-3 bg-emerald-600 text-white rounded-2xl text-xs font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 flex items-center gap-2"
-                  >
-                    {isAnalyzing ? <Loader2 className="animate-spin" size={16} /> : <Sparkles size={16} />}
-                    Generate Suggestions
+                    </button>
+                  </div>
+                </div>
+              ) : plantImage ? (
+                <div className="relative w-full h-full">
+                  <img src={plantImage} alt="Plant" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  <button onClick={() => setPlantImage(null)} className="absolute top-2 right-2 w-6 h-6 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-white">
+                    <X size={14} />
                   </button>
+                </div>
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center p-4 text-center">
+                  <div className="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center text-zinc-300 mb-2">
+                    <Camera size={24} />
+                  </div>
+                  <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">{t('no_visual_data')}</p>
+                </div>
+              )}
+              
+              {isAnalyzing && (
+                <div className="absolute inset-0 bg-emerald-950/80 backdrop-blur-md flex items-center justify-center z-20">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="w-8 h-8 border-2 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
+                    <p className="text-emerald-400 font-black text-[8px] uppercase tracking-[0.3em] animate-pulse">Analyzing</p>
+                  </div>
                 </div>
               )}
             </div>
-          </div>
+
+            {analysisResult && (
+              <div className="mt-3 p-3 bg-emerald-50 rounded-xl border border-emerald-100">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-[7px] font-black text-emerald-700 uppercase tracking-widest">{t('ai_analysis')}</span>
+                  <span className="text-[7px] font-black text-emerald-600 bg-white px-1.5 py-0.5 rounded-full shadow-sm">
+                    {Math.round(analysisResult.confidence * 100)}% {t('match')}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <p className="text-[7px] font-bold text-emerald-600/60 uppercase mb-0.5">{t('health')}</p>
+                    <p className="text-[10px] font-black text-emerald-900">{analysisResult.healthStatus}</p>
+                  </div>
+                  <div>
+                    <p className="text-[7px] font-bold text-emerald-600/60 uppercase mb-0.5">{t('stage')}</p>
+                    <p className="text-[10px] font-black text-emerald-900">{analysisResult.growthStage}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </section>
         </div>
       </div>
 
-      {/* History Section */}
-      <div id="growth-history" className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <HistoryIcon className="text-zinc-400" size={20} />
-            <h3 className="text-lg font-bold text-zinc-900">Growth History</h3>
+      {/* AI Deep Suggestions Section */}
+      <section className="mb-10">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="h-[1px] flex-1 bg-zinc-100" />
+          <div className="flex items-center gap-2 px-3">
+            <Sparkles className="text-emerald-500" size={20} />
+            <h2 className="text-lg font-black text-emerald-950 tracking-tight uppercase">{t('cultivation_intelligence')}</h2>
           </div>
-          <div className="flex gap-2">
+          <div className="h-[1px] flex-1 bg-zinc-100" />
+        </div>
+
+        {aiAdvice.stage ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <AdviceCard 
+              title={t('growth_stage')} 
+              content={aiAdvice.stage} 
+              icon={<Leaf size={16} />} 
+              color="emerald" 
+            />
+            <AdviceCard 
+              title={t('fertilizer_plan')} 
+              content={aiAdvice.fertilizer || ''} 
+              icon={<Sparkles size={16} />} 
+              color="blue" 
+            />
+            <AdviceCard 
+              title={t('hydration')} 
+              content={aiAdvice.watering || ''} 
+              icon={<RefreshCw size={16} />} 
+              color="cyan" 
+            />
+            <AdviceCard 
+              title={t('protection')} 
+              content={aiAdvice.pest || ''} 
+              icon={<AlertCircle size={16} />} 
+              color="rose" 
+            />
+          </div>
+        ) : (
+          <div className="bg-zinc-50 rounded-[2rem] p-8 text-center border border-dashed border-zinc-200">
+            <div className="max-w-sm mx-auto">
+              <div className="w-14 h-14 bg-white rounded-2xl shadow-sm flex items-center justify-center text-emerald-500 mx-auto mb-4">
+                <Info size={28} />
+              </div>
+              <h3 className="text-base font-black text-emerald-950 mb-2">{t('deep_insights_req')}</h3>
+              <p className="text-[11px] text-zinc-500 font-medium mb-6 leading-relaxed">
+                {t('deep_insights_desc')}
+              </p>
+              <button 
+                onClick={handleGetSuggestions}
+                disabled={isAnalyzing || !plantName}
+                className="px-6 py-3.5 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-md shadow-emerald-200 flex items-center gap-2 mx-auto disabled:opacity-50"
+              >
+                {isAnalyzing ? <Loader2 className="animate-spin" size={16} /> : <Sparkles size={16} />}
+                {t('generate_deep_report')}
+              </button>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* History Section */}
+      <section id="growth-history" className="space-y-6">
+        <div className="flex items-center justify-between border-b border-zinc-100 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-zinc-100 rounded-xl flex items-center justify-center text-zinc-400">
+              <HistoryIcon size={20} />
+            </div>
+            <div>
+              <h3 className="text-lg font-black text-emerald-950 uppercase tracking-tight">{t('growth_archive')}</h3>
+              <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">{t('historical_data')}</p>
+            </div>
+          </div>
+          <div className="flex gap-2 items-center">
             {isSelectionMode ? (
               <>
                 <button 
                   onClick={handleDeleteSelected}
                   disabled={selectedHistoryItems.length === 0}
-                  className="px-3 py-1.5 bg-red-100 text-red-600 rounded-xl text-[10px] font-bold hover:bg-red-200 transition-all disabled:opacity-50"
+                  className="px-3 py-2 bg-rose-500 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-rose-600 transition-all shadow-md shadow-rose-200 disabled:opacity-50"
                 >
-                  Delete ({selectedHistoryItems.length})
+                  {t('delete')} ({selectedHistoryItems.length})
                 </button>
                 <button 
                   onClick={() => {
                     setIsSelectionMode(false);
                     setSelectedHistoryItems([]);
                   }}
-                  className="px-3 py-1.5 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-bold hover:bg-zinc-200 transition-all"
+                  className="px-3 py-2 bg-zinc-100 text-zinc-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all border border-zinc-200"
                 >
-                  Cancel
+                  {t('cancel')}
                 </button>
               </>
             ) : (
               <>
                 <button 
                   onClick={() => setIsSelectionMode(true)}
-                  className="px-3 py-1.5 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-bold hover:bg-zinc-200 transition-all"
+                  className="px-4 py-2 bg-emerald-50 text-emerald-700 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-emerald-100 transition-all border border-emerald-100"
                 >
-                  Select
+                  {t('manage')}
                 </button>
-                <button 
-                  onClick={handleClearAll}
-                  className="px-3 py-1.5 bg-zinc-100 text-red-500 rounded-xl text-[10px] font-bold hover:bg-red-50 transition-all"
-                >
-                  Clear All
-                </button>
+                {showPurgeConfirm ? (
+                  <div className="flex gap-1 animate-in fade-in slide-in-from-right-2">
+                    <button 
+                      onClick={() => {
+                        handleClearAll();
+                        setShowPurgeConfirm(false);
+                      }}
+                      className="px-3 py-2 bg-rose-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-rose-700 transition-all shadow-md shadow-rose-200"
+                    >
+                      {t('confirm_clear')}
+                    </button>
+                    <button 
+                      onClick={() => setShowPurgeConfirm(false)}
+                      className="px-3 py-2 bg-zinc-100 text-zinc-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all border border-zinc-200"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <button 
+                    onClick={() => setShowPurgeConfirm(true)}
+                    className="px-4 py-2 bg-rose-50 text-rose-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-rose-100 transition-all border border-rose-100"
+                  >
+                    {t('clear_all')}
+                  </button>
+                )}
               </>
             )}
           </div>
         </div>
 
         <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
+          <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
           <input 
             type="text"
             value={historySearch}
             onChange={(e) => setHistorySearch(e.target.value)}
-            placeholder="Search history..."
-            className="w-full pl-12 pr-4 py-3 bg-white border-2 border-zinc-100 rounded-2xl focus:border-emerald-500 outline-none transition-all text-sm"
+            placeholder={t('search_archives')}
+            className="w-full pl-14 pr-5 py-4 bg-white border border-zinc-100 rounded-2xl focus:border-emerald-500 outline-none transition-all font-bold text-emerald-950 text-sm"
           />
         </div>
 
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {filteredHistory.length > 0 ? (
             filteredHistory.map((item) => (
               <motion.div 
                 key={item.id}
                 layout
-                className={`bg-white border-2 rounded-3xl p-4 flex items-center gap-4 group transition-all ${
-                  selectedHistoryItems.includes(item.id) ? 'border-emerald-500 bg-emerald-50/30' : 'border-zinc-100 hover:border-zinc-200'
+                className={`bg-white border rounded-2xl p-4 flex items-center gap-4 group transition-all cursor-pointer ${
+                  selectedHistoryItems.includes(item.id) ? 'border-emerald-500 bg-emerald-50/30' : 'border-zinc-100 hover:border-emerald-200 hover:shadow-lg hover:shadow-emerald-500/5'
                 }`}
                 onClick={() => isSelectionMode && toggleSelection(item.id)}
               >
                 {isSelectionMode && (
-                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
+                  <div className={`w-6 h-6 rounded-full border flex items-center justify-center transition-all flex-shrink-0 ${
                     selectedHistoryItems.includes(item.id) ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-zinc-200'
                   }`}>
-                    {selectedHistoryItems.includes(item.id) && <CheckCircle2 size={14} />}
+                    {selectedHistoryItems.includes(item.id) && <CheckCircle2 size={12} />}
                   </div>
                 )}
                 
-                {item.image && (
-                  <div className="w-16 h-16 rounded-2xl overflow-hidden flex-shrink-0 border border-zinc-100">
+                {item.image ? (
+                  <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 border border-zinc-50 shadow-sm">
                     <img src={item.image} alt="Log" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  </div>
+                ) : (
+                  <div className="w-14 h-14 rounded-xl bg-zinc-50 flex items-center justify-center text-zinc-300 flex-shrink-0 border border-zinc-50">
+                    {item.type === 'growth_search' ? <Search size={24} /> : <Leaf size={24} />}
                   </div>
                 )}
                 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    {item.type === 'growth_search' ? <Search size={12} className="text-blue-500" /> : <Sparkles size={12} className="text-emerald-500" />}
-                    <h4 className="font-bold text-zinc-900 truncate">{item.title}</h4>
+                    <h4 className="font-black text-emerald-950 truncate text-sm">{item.title}</h4>
                   </div>
-                  <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest mb-1">
-                    {new Date(item.timestamp).toLocaleDateString()} • {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </p>
-                  <p className="text-xs text-zinc-500 line-clamp-1">{item.details}</p>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest">
+                      {new Date(item.timestamp).toLocaleDateString()}
+                    </span>
+                    <div className="w-0.5 h-0.5 bg-zinc-200 rounded-full" />
+                    <span className="text-[8px] font-black text-emerald-600 uppercase tracking-widest">
+                      {item.type === 'growth_search' ? 'Search' : 'Log'}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-zinc-500 font-medium line-clamp-1 leading-relaxed">{item.details}</p>
                 </div>
 
                 {!isSelectionMode && (
@@ -641,21 +680,53 @@ export default function GrowthTrackerScreen() {
                       e.stopPropagation();
                       deleteHistoryItem(item.id);
                     }}
-                    className="p-2 text-zinc-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                    className="p-2 text-zinc-300 hover:text-rose-500 transition-colors md:opacity-0 md:group-hover:opacity-100"
                   >
-                    <Trash2 size={18} />
+                    <Trash2 size={16} />
                   </button>
                 )}
               </motion.div>
             ))
           ) : (
-            <div className="text-center py-12 bg-zinc-50 rounded-[2.5rem] border-2 border-dashed border-zinc-200">
-              <HistoryIcon className="mx-auto text-zinc-300 mb-2" size={32} />
-              <p className="text-zinc-500 text-sm font-medium">No history found.</p>
+            <div className="col-span-full text-center py-16 bg-zinc-50 rounded-[2rem] border border-dashed border-zinc-200">
+              <HistoryIcon className="mx-auto text-zinc-200 mb-3" size={32} />
+              <p className="text-zinc-400 font-black uppercase tracking-[0.2em] text-xs">{t('archive_empty')}</p>
             </div>
           )}
         </div>
-      </div>
+      </section>
+
+      {/* Hidden inputs */}
+      <canvas ref={canvasRef} className="hidden" />
+      <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" />
+      <input type="file" accept="image/*" capture="environment" className="hidden" ref={cameraInputRef} onChange={handleImageUpload} />
     </div>
+  );
+}
+
+function AdviceCard({ title, content, icon, color }: { title: string; content: string; icon: React.ReactNode; color: 'emerald' | 'blue' | 'cyan' | 'rose' }) {
+  const { t } = useApp();
+  const isError = content.startsWith('ai_error_');
+  const displayContent = isError ? t(content as any) : content;
+  
+  const colorClasses = {
+    emerald: isError ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100',
+    blue: isError ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-blue-50 text-blue-600 border-blue-100',
+    cyan: isError ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-cyan-50 text-cyan-600 border-cyan-100',
+    rose: 'bg-rose-50 text-rose-600 border-rose-100'
+  };
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`bg-white p-4 rounded-2xl border ${isError ? 'border-rose-200 bg-rose-50/30' : 'border-zinc-100'} shadow-sm flex flex-col hover:border-emerald-200 transition-all group`}
+    >
+      <div className={`w-8 h-8 rounded-xl flex items-center justify-center mb-3 border shadow-sm transition-all group-hover:scale-110 ${colorClasses[color]}`}>
+        {isError ? <AlertCircle size={16} /> : icon}
+      </div>
+      <h4 className={`text-[8px] font-black ${isError ? 'text-rose-400' : 'text-zinc-400'} uppercase tracking-widest mb-1.5`}>{title}</h4>
+      <p className={`text-[11px] ${isError ? 'text-rose-700' : 'text-zinc-600'} font-bold leading-relaxed flex-1`}>{displayContent}</p>
+    </motion.div>
   );
 }

@@ -4,9 +4,10 @@ import { Sparkles, ArrowLeft, Bot, User, Loader2, Send } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Markdown from 'react-markdown';
 import { GoogleGenAI } from "@google/genai";
+import { getAIErrorKey } from '../services/geminiService';
 
 export default function ChatScreen({ initialQuery, onBack }: { initialQuery: string, onBack: () => void }) {
-  const { allPlants } = useApp();
+  const { allPlants, sensors, cityName, currentLanguage, t } = useApp();
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant', content: string }[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [input, setInput] = useState('');
@@ -15,44 +16,15 @@ export default function ChatScreen({ initialQuery, onBack }: { initialQuery: str
   const hasInitialized = useRef(false);
   const isProcessing = useRef(false);
 
-  const getValidKeys = () => {
-    const keys = [
-      process.env.GEMINI_API_KEY,
-      process.env.VITE_GEMINI_API_KEY,
-      process.env.API_KEY,
-      (import.meta as any).env?.VITE_GEMINI_API_KEY
-    ];
-    
-    return keys
-      .map(k => String(k || '').trim())
-      .filter(val => 
-        val !== '' && 
-        val !== 'undefined' && 
-        val !== 'null' && 
-        val !== 'YOUR_API_KEY'
-      );
-  };
-
   const handleOpenKeySelector = async () => {
     if ((window as any).aistudio?.openSelectKey) {
       await (window as any).aistudio.openSelectKey();
-    } else {
-      alert("Please open Settings (gear icon) -> Secrets in AI Studio to add your GEMINI_API_KEY.");
     }
   };
 
   useEffect(() => {
     if (hasInitialized.current) return;
     hasInitialized.current = true;
-
-    const validKeys = getValidKeys();
-    if (validKeys.length === 0) {
-      setMessages([{ 
-        role: 'assistant', 
-        content: "### ⚠️ AI Key Missing\n\nThe AI Assistant is currently unavailable because a valid Gemini API key was not found. Your current key might be set to a placeholder like 'AI Studio Free Tier'.\n\n**To fix this:**\n1. Get a real key from [ai.google.dev](https://ai.google.dev/).\n2. Click the button below or open **Settings** (gear icon) -> **Secrets** in AI Studio.\n3. Add a secret named `GEMINI_API_KEY` and paste your actual key string." 
-      }]);
-      return;
-    }
 
     if (initialQuery) {
       handleAsk(initialQuery);
@@ -63,11 +35,10 @@ export default function ChatScreen({ initialQuery, onBack }: { initialQuery: str
     if (!query.trim() || isProcessing.current) return;
     isProcessing.current = true;
     
-    setMessages(prev => [...prev, { role: 'user', content: query }]);
+    const userMessage = { role: 'user' as const, content: query };
+    setMessages(prev => [...prev, userMessage]);
     setIsTyping(true);
     setInput('');
-
-    const validKeys = getValidKeys();
 
     // Local fallback for common plant questions
     const lowerQuery = query.toLowerCase();
@@ -76,63 +47,77 @@ export default function ChatScreen({ initialQuery, onBack }: { initialQuery: str
     );
 
     if (plantMatch && (lowerQuery.includes('how to grow') || lowerQuery.includes('care') || lowerQuery.includes('about'))) {
-      const localResponse = `### Expert Advice on ${plantMatch.name}\n\n${plantMatch.description}\n\n**Growth Time:** ${plantMatch.growthTime}\n**Requirements:** ${plantMatch.needs}\n**Best Months:** ${plantMatch.suitableMonths}\n\n*Note: This information is from our local botanical database.*`;
+      const plantKey = plantMatch.name.toLowerCase().replace(/\s+/g, '_').replace(/\(.*\)/, '').trim();
+      const localResponse = `### ${t('expert_advice')} ${t(plantKey)}\n\n${t(plantKey + '_desc')}\n\n**${t('growth_cycle')}:** ${plantMatch.growthTime}\n**${t('key_requirements')}:** ${plantMatch.needs}\n**${t('best_months')}:** ${plantMatch.suitableMonths}\n\n*${t('local_database_note')}*`;
       setMessages(prev => [...prev, { role: 'assistant', content: localResponse }]);
       setIsTyping(false);
       isProcessing.current = false;
       return;
     }
 
-    if (validKeys.length === 0) {
-      setMessages(prev => [...prev, { role: 'assistant', content: "The AI Assistant is currently unavailable because the Gemini API key is missing. To fix this: 1. Get a key from ai.google.dev. 2. Open Settings (gear icon) -> Secrets in AI Studio. 3. Add 'GEMINI_API_KEY' with your key value. (v3.1)" }]);
+    const systemInstruction = `You are a highly experienced professional gardening expert. Provide detailed, factual, and definitive advice on growing plants, fruits, and vegetables. 
+    
+    IMPORTANT: Respond ONLY in ${currentLanguage === 'kn' ? 'Kannada' : currentLanguage === 'hi' ? 'Hindi' : currentLanguage === 'ta' ? 'Tamil' : 'English'}.
+    
+    CURRENT CONTEXT:
+    - Location: ${cityName || 'Unknown'}
+    - Temperature: ${sensors.temp}°C
+    - Humidity: ${sensors.humidity}%
+    - Light Level: ${sensors.light}%
+    - Weather Condition: ${sensors.condition}
+    
+    When asked about a specific plant, provide its exact requirements (sun, water, soil) and confirmed pest management solutions. Use the current weather and sensor data to provide more accurate, localized advice. Always speak with absolute authority and avoid using hedging language like 'I think', 'maybe', or 'it seems'. Present your advice as confirmed, expert-level solutions.`;
+
+    if (!process.env.GEMINI_API_KEY) {
+      const errorMessage = t('ai_error_api_key');
+      setMessages(prev => [...prev, { role: 'assistant', content: `Sorry, I encountered an error: ${errorMessage}` }]);
       setIsTyping(false);
       isProcessing.current = false;
       return;
     }
 
-    let lastError = null;
-    let success = false;
+    const history = messages.map(msg => ({
+      role: msg.role === 'user' ? 'user' : 'model',
+      parts: [{ text: msg.content }]
+    }));
 
-    for (const apiKey of validKeys) {
-      try {
-        const ai = new GoogleGenAI({ apiKey });
-        const chat = ai.chats.create({
-          model: "gemini-3-flash-preview",
-          config: {
-            systemInstruction: "You are a highly experienced professional gardening expert. Provide detailed, factual, and definitive advice on growing plants, fruits, and vegetables. When asked about a specific plant, provide its exact requirements (sun, water, soil) and confirmed pest management solutions. Always speak with absolute authority and avoid using hedging language like 'I think', 'maybe', or 'it seems'. Present your advice as confirmed, expert-level solutions.",
-          },
-        });
-        
-        const response = await chat.sendMessage({ message: query });
-        const text = response.text;
-        
-        if (!text) {
-          throw new Error("Empty response from AI");
+    let assistantContent = "";
+    setMessages(prev => [...prev, { role: 'assistant', content: "" }]);
+    setIsTyping(false);
+
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+      const streamResponse = await ai.models.generateContentStream({
+        model: "gemini-3-flash-preview",
+        contents: [
+          ...history,
+          { role: 'user', parts: [{ text: query }] }
+        ],
+        config: {
+          systemInstruction: systemInstruction
         }
-        
-        setMessages(prev => [...prev, { role: 'assistant', content: text }]);
-        success = true;
-        break; // Stop after first successful key
-      } catch (error: any) {
-        console.error(`Chat Error with key starting with ${apiKey.substring(0, 4)}:`, error);
-        lastError = error;
-        // Continue to next key
-      }
-    }
+      });
 
-    if (!success) {
-      const originalMsg = lastError?.message || String(lastError);
-      let errorMessage = `Sorry, I encountered an error: ${originalMsg}`;
-      
-      if (originalMsg.includes('API_KEY_INVALID')) {
-        errorMessage = `INVALID_KEY: The API key is not valid or restricted. (${originalMsg})`;
-      } else if (originalMsg.includes('PERMISSION_DENIED')) {
-        errorMessage = `PERMISSION_DENIED: Gemini API might not be enabled for these keys. (${originalMsg})`;
-      } else if (originalMsg.includes('quota')) {
-        errorMessage = `QUOTA_EXCEEDED: AI search limit reached on all keys. (${originalMsg})`;
+      for await (const chunk of streamResponse) {
+        if (chunk.text) {
+          assistantContent += chunk.text;
+          setMessages(prev => {
+            const newMessages = [...prev];
+            newMessages[newMessages.length - 1].content = assistantContent;
+            return newMessages;
+          });
+        }
       }
+    } catch (error: any) {
+      console.error("Chat Stream Error:", error);
+      const errorKey = getAIErrorKey(error);
+      const errorMessage = t(errorKey as any);
       
-      setMessages(prev => [...prev, { role: 'assistant', content: errorMessage }]);
+      setMessages(prev => {
+        const newMessages = [...prev];
+        newMessages[newMessages.length - 1].content = `Sorry, I encountered an error: ${errorMessage}`;
+        return newMessages;
+      });
     }
 
     setIsTyping(false);
@@ -154,7 +139,7 @@ export default function ChatScreen({ initialQuery, onBack }: { initialQuery: str
           <div className="w-8 h-8 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-600">
             <Sparkles size={18} />
           </div>
-          <h1 className="font-bold text-zinc-900">Garden AI Assistant</h1>
+          <h1 className="font-bold text-zinc-900">{t('garden_ai_assistant')}</h1>
         </div>
       </header>
 
@@ -164,8 +149,8 @@ export default function ChatScreen({ initialQuery, onBack }: { initialQuery: str
             <div className="w-16 h-16 bg-emerald-50 rounded-3xl flex items-center justify-center text-emerald-600 mb-4">
               <Bot size={32} />
             </div>
-            <h2 className="text-xl font-bold text-zinc-900 mb-2">How can I help you today?</h2>
-            <p className="text-zinc-500 text-sm">Ask me about any plant, fruit, or vegetable you'd like to grow!</p>
+            <h2 className="text-xl font-bold text-zinc-900 mb-2">{t('how_can_i_help')}</h2>
+            <p className="text-zinc-500 text-sm">{t('ask_about_plant')}</p>
           </div>
         )}
         
@@ -187,13 +172,13 @@ export default function ChatScreen({ initialQuery, onBack }: { initialQuery: str
               </div>
             </div>
             
-            {msg.content.includes("AI Key Missing") && (
+            {msg.role === 'assistant' && (msg.content.includes(t('ai_error_api_key')) || msg.content.includes("API Key Missing")) && (
               <button 
                 onClick={handleOpenKeySelector}
                 className="ml-11 mt-2 px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl shadow-lg active:scale-95 transition-all flex items-center gap-2"
               >
                 <Sparkles size={14} />
-                Setup Gemini API Key
+                {t('setup_gemini_key')}
               </button>
             )}
           </motion.div>
@@ -209,7 +194,7 @@ export default function ChatScreen({ initialQuery, onBack }: { initialQuery: str
             </div>
             <div className="bg-zinc-50 p-4 rounded-3xl rounded-tl-none border border-zinc-100 flex items-center gap-2">
               <Loader2 size={16} className="animate-spin text-emerald-600" />
-              <span className="text-xs text-zinc-500 font-medium">AI is thinking...</span>
+              <span className="text-xs text-zinc-500 font-medium">{t('ai_thinking')}</span>
             </div>
           </motion.div>
         )}
@@ -222,7 +207,7 @@ export default function ChatScreen({ initialQuery, onBack }: { initialQuery: str
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask a follow-up question..."
+            placeholder={t('ask_follow_up')}
             className="flex-1 bg-zinc-100 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
             disabled={isTyping}
           />

@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react';
 import { useApp } from '../AppContext';
-import { DollarSign, Droplets, Sprout, Hammer, Plus, Trash2, TrendingUp, Calculator } from 'lucide-react';
+import { DollarSign, Droplets, Sprout, Hammer, Plus, Trash2, TrendingUp, Calculator, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
-export default function TrackerScreen() {
-  const { expenses, addExpense, deleteExpense } = useApp();
+export default function TrackerScreen({ onBack }: { onBack: () => void }) {
+  const { expenses, addExpense, deleteExpense, t } = useApp();
   const [isAdding, setIsAdding] = useState(false);
   const [newExpense, setNewExpense] = useState({ 
     category: 'seeds', 
@@ -49,44 +49,53 @@ export default function TrackerScreen() {
   };
 
   return (
-    <div className="pb-24">
-      <header className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-4xl font-black tracking-tighter text-zinc-900 uppercase">Tracker</h1>
-          <p className="text-zinc-500 font-medium">Expenses & ROI analysis</p>
+    <div className="pb-24 px-5 pt-6">
+      <header className="flex justify-between items-center mb-6">
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={onBack}
+            className="w-10 h-10 bg-white border border-zinc-200 rounded-full flex items-center justify-center text-zinc-600 hover:bg-zinc-50 transition-colors"
+          >
+            <ArrowLeft size={20} />
+          </button>
+          <div>
+            <h1 className="text-xl font-bold text-emerald-950 tracking-tight">{t('expenses_tracker')}</h1>
+            <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Financial Analysis</p>
+          </div>
         </div>
         <button 
           onClick={() => setIsAdding(true)}
-          className="w-12 h-12 bg-zinc-900 text-white rounded-full flex items-center justify-center hover:scale-105 transition-transform"
+          className="w-10 h-10 bg-emerald-600 text-white rounded-full flex items-center justify-center shadow-lg shadow-emerald-100 active:scale-95 transition-all"
         >
-          <Plus size={24} />
+          <Plus size={20} />
         </button>
       </header>
 
-      {/* ROI Summary Card */}
-      <div className="bg-zinc-900 rounded-3xl p-6 text-white mb-8 relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-4 opacity-10">
-          <TrendingUp size={120} />
+      {/* ROI Summary Card - More compact */}
+      <div className="bg-emerald-950 rounded-[2.5rem] p-6 text-white mb-8 relative overflow-hidden shadow-2xl shadow-emerald-900/20">
+        <div className="absolute top-0 right-0 p-6 opacity-10">
+          <TrendingUp size={80} />
         </div>
         <div className="relative z-10">
-          <div className="flex items-center gap-2 mb-4">
-            <Calculator size={16} className="text-emerald-400" />
-            <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Garden ROI Analysis</span>
+          <div className="flex items-center gap-2 mb-6">
+            <div className="w-6 h-6 bg-emerald-500/20 rounded-lg flex items-center justify-center">
+              <Calculator size={12} className="text-emerald-400" />
+            </div>
+            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-500">Performance Index</span>
           </div>
-          <div className="grid grid-cols-2 gap-8">
+          <div className="grid grid-cols-2 gap-8 mb-6">
             <div>
-              <p className="text-zinc-400 text-[10px] font-bold uppercase tracking-widest mb-1">Total Investment</p>
-              <h2 className="text-3xl font-black">₹{stats.total.toFixed(2)}</h2>
+              <p className="text-emerald-500/60 text-[9px] font-black uppercase tracking-widest mb-1">Investment</p>
+              <h2 className="text-2xl font-black">₹{stats.total.toFixed(2)}</h2>
             </div>
             <div>
-              <p className="text-zinc-400 text-[10px] font-bold uppercase tracking-widest mb-1">Estimated ROI</p>
-              <h2 className="text-3xl font-black text-emerald-400">+{stats.roi.toFixed(0)}%</h2>
+              <p className="text-emerald-500/60 text-[9px] font-black uppercase tracking-widest mb-1">Projected ROI</p>
+              <h2 className="text-2xl font-black text-emerald-400">+{stats.roi.toFixed(0)}%</h2>
             </div>
           </div>
-          <div className="mt-6 pt-6 border-t border-white/10">
-            <p className="text-[11px] text-zinc-400 leading-relaxed">
-              Based on your expenses, your home-grown produce is estimated to be worth <span className="text-white font-bold">₹{stats.estimatedYieldValue.toFixed(2)}</span>. 
-              That's a significant saving compared to store prices!
+          <div className="pt-4 border-t border-white/10">
+            <p className="text-[10px] text-emerald-100/60 leading-relaxed font-medium italic">
+              "Your garden is currently yielding <span className="text-emerald-400 font-bold">₹{stats.estimatedYieldValue.toFixed(2)}</span> in value."
             </p>
           </div>
         </div>

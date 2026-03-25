@@ -1,55 +1,67 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../AppContext';
-import { Droplets, Thermometer, Wind, Sun, Plus, Leaf, CloudRain, Cloud, Zap, AlertCircle, MapPin, TrendingUp, Share2, Maximize, Sparkles, Camera, Loader2, Bell, Search, ShoppingBag, X, ChevronRight } from 'lucide-react';
+import { Droplets, Thermometer, Wind, Sun, Plus, Leaf, CloudRain, Cloud, Zap, AlertCircle, MapPin, TrendingUp, Share2, Maximize, Sparkles, Camera, Loader2, Bell, Search, ShoppingBag, X, ChevronRight, Moon, CloudSun, CloudFog, CloudLightning, Snowflake, CloudDrizzle, RefreshCw, HelpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
-const SensorCard = ({ title, value, unit, icon: Icon, status, subtitle }: any) => {
+const SensorCard = ({ title, value, unit, icon: Icon, status, subtitle, trend }: any) => {
   const { t } = useApp();
   const getStatusColor = () => {
     switch (status) {
-      case 'good': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
-      case 'moderate': return 'bg-yellow-100 text-yellow-700 border-yellow-200';
-      case 'attention': return 'bg-red-100 text-red-700 border-red-200';
-      default: return 'bg-zinc-100 text-zinc-700 border-zinc-200';
+      case 'good': return 'bg-emerald-50 text-emerald-700 border-emerald-100';
+      case 'moderate': return 'bg-amber-50 text-amber-700 border-amber-100';
+      case 'attention': return 'bg-rose-50 text-rose-700 border-rose-100';
+      default: return 'bg-zinc-50 text-zinc-700 border-zinc-100';
     }
   };
 
   return (
     <motion.div
-      whileHover={{ y: -5 }}
-      className={`p-3.5 rounded-3xl border-2 ${getStatusColor()} flex flex-col gap-1.5 transition-all relative overflow-hidden`}
+      whileHover={{ y: -4, scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      className={`p-4 rounded-[2rem] border-2 ${getStatusColor()} flex flex-col gap-2 transition-all relative overflow-hidden shadow-sm hover:shadow-md`}
     >
       <div className="flex justify-between items-center">
-        <Icon size={20} />
-        <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/50">{t(status)}</span>
+        <div className={`p-2 rounded-xl ${getStatusColor()} border-0 shadow-inner`}>
+          <Icon size={18} />
+        </div>
+        <div className="flex flex-col items-end">
+          <span className="text-[8px] font-black uppercase tracking-widest opacity-60">{t(status)}</span>
+          {trend && (
+            <div className={`flex items-center gap-0.5 text-[8px] font-black uppercase ${trend > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+              {trend > 0 ? '↑' : '↓'} {Math.abs(trend)}%
+            </div>
+          )}
+        </div>
       </div>
       <div>
-        <h3 className="text-xs font-medium opacity-80">{title}</h3>
+        <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">{title}</h3>
         <div className="flex items-baseline gap-1">
           <AnimatePresence mode="wait">
             <motion.p
               key={value}
-              initial={{ opacity: 0, y: 5 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -5 }}
-              transition={{ duration: 0.2 }}
-              className="text-xl font-bold"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              className="text-2xl font-black tracking-tight"
             >
               {value}
             </motion.p>
           </AnimatePresence>
-          <span className="text-xs font-bold opacity-60">{unit}</span>
+          <span className="text-xs font-black opacity-40">{unit}</span>
         </div>
         {subtitle && (
-          <p className="text-[9px] font-bold opacity-50 mt-1 uppercase tracking-tighter">{subtitle}</p>
+          <p className="text-[8px] font-bold opacity-50 mt-1.5 uppercase tracking-tighter line-clamp-1">{subtitle}</p>
         )}
+      </div>
+      <div className="absolute -bottom-2 -right-2 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity">
+        <Icon size={60} />
       </div>
     </motion.div>
   );
 };
 
 export default function DashboardScreen({ onNavigate, onAskAI }: { onNavigate: (s: any) => void, onAskAI: (q: string) => void }) {
-  const { userData, sensors, waterPlant, suggestions, allPlants, searchPlantAI, enableLiveLocation, disableLiveLocation, isLocationEnabled, cityName, expenses, addToHistory, t, reports } = useApp();
+  const { userData, sensors, waterPlant, suggestions, allPlants, searchPlantAI, enableLiveLocation, disableLiveLocation, isLocationEnabled, cityName, expenses, addToHistory, t, reports, fetchWeatherData } = useApp();
   const [forecast, setForecast] = useState<any[]>([]);
   const [dashboardQuery, setDashboardQuery] = useState('');
   const [newPlantName, setNewPlantName] = useState('');
@@ -59,72 +71,71 @@ export default function DashboardScreen({ onNavigate, onAskAI }: { onNavigate: (
   const [timeSinceWatered, setTimeSinceWatered] = useState<string>('');
   const [isAlertsModalOpen, setIsAlertsModalOpen] = useState(false);
   const [selectedAlert, setSelectedAlert] = useState<any | null>(null);
+  const [showEfficiencyInfo, setShowEfficiencyInfo] = useState(false);
 
   const diseaseAlerts = useMemo(() => {
     const alerts = [];
-    
-    // High humidity + Moderate temp = Blight Risk
     if (sensors.humidity > 75 && sensors.temp > 15 && sensors.temp < 28) {
       alerts.push({ 
-        name: 'Tomato Late Blight', 
-        location: '2.4 km away', 
-        risk: 'High', 
+        name: t('alert_blight_name'), 
+        location: t('alert_blight_location'), 
+        risk: t('risk_high'), 
         color: 'text-red-600', 
         bg: 'bg-red-50',
-        description: 'Late blight is a devastating disease that can destroy entire tomato crops in a matter of days.',
-        why: 'High humidity (above 75%) and moderate temperatures (15-28°C) currently detected in your area create the perfect environment for spores to spread.',
-        prevention: 'Ensure good air circulation, avoid overhead watering, and use resistant varieties.',
-        remedy: 'Apply organic fungicides like copper spray or a mixture of baking soda and water.'
+        description: t('alert_blight_desc'),
+        why: t('alert_blight_why'),
+        prevention: t('alert_blight_prev'),
+        remedy: t('alert_blight_rem')
       });
     }
 
     // Warm + Dry = Powdery Mildew
     if (sensors.temp > 25 && sensors.humidity < 50) {
       alerts.push({ 
-        name: 'Powdery Mildew', 
-        location: '5.1 km away', 
-        risk: 'Medium', 
+        name: t('alert_mildew_name'), 
+        location: t('alert_mildew_location'), 
+        risk: t('risk_medium'), 
         color: 'text-orange-600', 
         bg: 'bg-orange-50',
-        description: 'Powdery mildew appears as white or gray powdery spots on leaves and stems.',
-        why: 'Warm days and dry air (humidity below 50%) currently detected favor the growth of these fungal spores.',
-        prevention: 'Plant in sunny locations and provide adequate spacing for airflow.',
-        remedy: 'Spray a mixture of milk and water (40:60 ratio) or use a sulfur-based organic fungicide.'
+        description: t('alert_mildew_desc'),
+        why: t('alert_mildew_why'),
+        prevention: t('alert_mildew_prev'),
+        remedy: t('alert_mildew_rem')
       });
     }
 
     // High temp = Aphid Activity
     if (sensors.temp > 32) {
       alerts.push({ 
-        name: 'Aphid Infestation', 
-        location: '1.8 km away', 
-        risk: 'High', 
+        name: t('alert_aphid_name'), 
+        location: t('alert_aphid_location'), 
+        risk: t('risk_high'), 
         color: 'text-red-600', 
         bg: 'bg-red-50',
-        description: 'Aphids are small insects that suck the sap from plants, causing leaves to curl.',
-        why: 'High temperatures (above 32°C) currently detected accelerate aphid reproduction cycles.',
-        prevention: 'Encourage beneficial insects like ladybugs and avoid over-fertilizing with nitrogen.',
-        remedy: 'Blast them off with a strong stream of water or use neem oil spray.'
+        description: t('alert_aphid_desc'),
+        why: t('alert_aphid_why'),
+        prevention: t('alert_aphid_prev'),
+        remedy: t('alert_aphid_rem')
       });
     }
 
     // Default if no specific weather triggers
     if (alerts.length === 0) {
       alerts.push({
-        name: 'General Pest Watch',
-        location: 'Local area',
-        risk: 'Low',
+        name: t('alert_general_name'),
+        location: t('alert_general_location'),
+        risk: t('risk_low'),
         color: 'text-emerald-600',
         bg: 'bg-emerald-50',
-        description: 'No specific weather-triggered threats detected.',
-        why: 'Your current environmental conditions are stable and not favoring common disease outbreaks.',
-        prevention: 'Continue regular monitoring and maintain healthy soil.',
-        remedy: 'Keep using organic compost to build plant immunity.'
+        description: t('alert_general_desc'),
+        why: t('alert_general_why'),
+        prevention: t('alert_general_prev'),
+        remedy: t('alert_general_rem')
       });
     }
 
     return alerts;
-  }, [sensors.temp, sensors.humidity]);
+  }, [sensors.temp, sensors.humidity, t]);
 
   useEffect(() => {
     if (userData?.lastWatered) {
@@ -163,7 +174,8 @@ export default function DashboardScreen({ onNavigate, onAskAI }: { onNavigate: (
         }
       } catch (error: any) {
         console.error("Search Error:", error);
-        setSearchError(error.message || "Failed to find plant details.");
+        const errorMsg = error.message?.startsWith('ai_error_') ? t(error.message) : (error.message || t('unknown_error'));
+        setSearchError(errorMsg);
       } finally {
         setIsSearching(false);
         setNewPlantName('');
@@ -173,15 +185,22 @@ export default function DashboardScreen({ onNavigate, onAskAI }: { onNavigate: (
 
   useEffect(() => {
     const getConditionIcon = (condition: string) => {
-      if (condition === 'Thunderstorm') return Zap;
-      if (condition.includes('Rain')) return CloudRain;
-      if (condition === 'Cloudy') return Cloud;
+      const cond = condition.toLowerCase();
+      if (cond === 'thunderstorm') return CloudLightning;
+      if (cond === 'rain showers' || cond === 'rain') return CloudRain;
+      if (cond === 'drizzle') return CloudDrizzle;
+      if (cond === 'foggy') return CloudFog;
+      if (cond === 'snowy') return Snowflake;
+      if (cond === 'cloudy') return Cloud;
+      if (cond === 'partly cloudy') return CloudSun;
+      if (cond === 'clear') return Moon;
+      if (cond === 'sunny') return Sun;
       return Sun;
     };
 
     // Mock forecast data
     setForecast([
-      { day: t('today'), temp: Math.round(sensors.temp), condition: t(sensors.condition.toLowerCase()), icon: getConditionIcon(sensors.condition) },
+      { day: t('today'), temp: Math.round(sensors.temp), condition: t(sensors.condition.toLowerCase().replace(/\s+/g, '_')), icon: getConditionIcon(sensors.condition) },
       { day: t('tomorrow'), temp: Math.round(sensors.temp + 2), condition: t('sunny'), icon: Sun },
       { day: t('day_after'), temp: Math.round(sensors.temp - 1), condition: t('cloudy'), icon: Cloud },
     ]);
@@ -199,6 +218,10 @@ export default function DashboardScreen({ onNavigate, onAskAI }: { onNavigate: (
     
     const isSuitable = tempMatch && humidityMatch && lightMatch;
     
+    // Balcony suitability check
+    const unsuitableForBalcony = ['coconut', 'mango', 'banyan', 'peepal', 'teak', 'mahogany', 'jackfruit', 'tamarind', 'neem'];
+    const isBalconySuitable = !unsuitableForBalcony.some(p => plant.name.toLowerCase().includes(p));
+
     // Check for long-term seasonal requirements
     const desc = (plant.description || '').toLowerCase();
     const needsText = (plant.needs || '').toLowerCase();
@@ -221,7 +244,7 @@ export default function DashboardScreen({ onNavigate, onAskAI }: { onNavigate: (
       tip = t('chill_hours_advice');
     }
 
-    return { isSuitable, isConditional, reason, tip };
+    return { isSuitable, isConditional, isBalconySuitable, reason, tip };
   };
 
   const getStatus = (type: string, val: number) => {
@@ -264,7 +287,8 @@ export default function DashboardScreen({ onNavigate, onAskAI }: { onNavigate: (
         return;
       }
       // Otherwise, just ask AI
-      handleDashboardSubmit(e);
+      addToHistory({ type: 'search', title: `AI Chat: ${globalSearchQuery}`, details: globalSearchQuery });
+      onAskAI(globalSearchQuery);
       setIsSearchModalOpen(false);
       setGlobalSearchQuery('');
     }
@@ -290,101 +314,101 @@ export default function DashboardScreen({ onNavigate, onAskAI }: { onNavigate: (
 
   const efficiencyScore = calculateEfficiency();
 
+  const handleRefreshWeather = () => {
+    if (isLocationEnabled && "geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          fetchWeatherData(position.coords.latitude, position.coords.longitude);
+        },
+        (error) => console.error(error),
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    }
+  };
+
   return (
-    <div className="p-5 pb-24">
+    <div className="px-4 pt-6 pb-24">
       {/* Header Section */}
       <header className="flex justify-between items-center mb-5">
         <div>
-          <h1 className="text-xl font-bold text-emerald-950 tracking-tight">{t('hello')}, {userData?.displayName}!</h1>
-          <p className="text-xs text-zinc-500 font-medium">{t('garden_doing_great')}</p>
+          <h1 className="text-lg font-bold text-emerald-950 tracking-tight">{t('hello')}, {userData?.displayName}!</h1>
+          <p className="text-[10px] text-zinc-500 font-medium">{t('garden_doing_great')}</p>
         </div>
-        <div className="flex items-center gap-2.5">
-          <button 
-            onClick={() => setIsSearchModalOpen(true)}
-            className="w-9 h-9 bg-white border border-zinc-200 rounded-full flex items-center justify-center text-zinc-600 hover:bg-zinc-50 transition-colors"
-          >
-            <Search size={18} />
-          </button>
-          <button className="w-9 h-9 bg-white border border-zinc-200 rounded-full flex items-center justify-center text-zinc-600 hover:bg-zinc-50 transition-colors relative">
-            <Bell size={18} />
+        <div className="flex items-center gap-2">
+          <button className="w-8 h-8 bg-white border border-zinc-200 rounded-full flex items-center justify-center text-zinc-600 hover:bg-zinc-50 transition-colors relative">
+            <Bell size={16} />
             {userData?.settings?.notifications && (
-              <div className="absolute top-2 right-2 w-1.5 h-1.5 bg-emerald-500 rounded-full border-2 border-white" />
+              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-emerald-500 rounded-full border-2 border-white" />
             )}
           </button>
-          <div className="w-9 h-9 bg-emerald-600 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-lg shadow-emerald-100">
+          <div className="w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg shadow-emerald-100">
             {userData?.displayName?.[0]}
           </div>
         </div>
       </header>
 
 
-      {/* Main Search Bar - Prominent at the top */}
-      <div className="mb-6">
-        <form onSubmit={handleDashboardSubmit} className="relative group">
-          <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-zinc-400 group-focus-within:text-emerald-600 transition-colors">
-            <Sparkles size={18} />
-          </div>
-          <input
-            type="text"
-            value={dashboardQuery}
-            onChange={(e) => setDashboardQuery(e.target.value)}
-            placeholder={t('ask_ai')}
-            className="w-full bg-white border-2 border-zinc-100 rounded-2xl pl-11 pr-14 py-3 text-sm font-medium focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all shadow-sm"
-          />
-          <button
-            type="submit"
-            disabled={!dashboardQuery.trim()}
-            className="absolute right-1.5 top-1.5 bottom-1.5 bg-emerald-600 text-white px-3.5 rounded-xl font-bold text-[10px] shadow-md active:scale-95 transition-all disabled:opacity-50"
-          >
-            {t('ask')}
-          </button>
-        </form>
-      </div>
-
       {/* Weather & Location Widget */}
-      <div className="mb-6">
-        <div className="bg-zinc-900 rounded-3xl p-4 text-white relative overflow-hidden shadow-2xl shadow-zinc-200">
+      <div className="mb-5">
+        <div className="bg-zinc-900 rounded-[1.75rem] p-4 text-white relative overflow-hidden shadow-xl shadow-zinc-200">
           <div className="absolute top-0 right-0 p-4 opacity-10">
-            <MapPin size={60} />
+            <MapPin size={50} />
           </div>
           
-          <div className="flex justify-between items-start mb-5 relative z-10">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <h3 className="text-[8px] font-black uppercase tracking-[0.2em] text-zinc-500">{t('live_environment')}</h3>
-                <div className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse" />
+          <div className="flex justify-between items-start mb-3 relative z-10">
+            <div className="flex-1">
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <div className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                <h3 className="text-[7px] font-black uppercase tracking-[0.2em] text-zinc-500">{t('live_environment')}</h3>
               </div>
-              <p className="text-base font-bold">{isLocationEnabled && cityName ? cityName : 'Global Sync'}</p>
+              <p className="text-base font-black tracking-tight truncate pr-4">{isLocationEnabled && cityName ? cityName : t('global_sync')}</p>
+              {sensors.lastUpdated && (
+                <p className="text-[7px] text-zinc-500 font-bold uppercase tracking-wider mt-0.5">
+                  {t('live')} • {new Date(sensors.lastUpdated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </p>
+              )}
             </div>
-            <button 
-              onClick={() => isLocationEnabled ? disableLiveLocation() : enableLiveLocation()}
-              className={`px-2.5 py-1 rounded-lg text-[8px] font-black tracking-widest transition-all ${isLocationEnabled ? 'bg-emerald-500 text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}
-            >
-              {isLocationEnabled ? t('location_on') : t('location_off')}
-            </button>
+            <div className="flex flex-col items-end gap-1.5">
+              <button 
+                onClick={() => isLocationEnabled ? disableLiveLocation() : enableLiveLocation()}
+                className={`px-2 py-0.5 rounded-md text-[7px] font-black tracking-widest transition-all shadow-lg ${isLocationEnabled ? 'bg-emerald-500 text-white shadow-emerald-500/20' : 'bg-white/10 text-white hover:bg-white/20'}`}
+              >
+                {isLocationEnabled ? t('location_on') : t('location_off')}
+              </button>
+              {isLocationEnabled && (
+                <button 
+                  onClick={handleRefreshWeather}
+                  className="p-1 bg-white/5 rounded-md text-zinc-400 hover:text-white transition-colors border border-white/5"
+                >
+                  <RefreshCw size={10} />
+                </button>
+              )}
+            </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3 relative z-10">
+          <div className="grid grid-cols-3 gap-2 relative z-10 mb-3">
             {forecast.map((f, i) => (
-              <div key={i} className="flex flex-col items-center text-center p-2 rounded-xl bg-white/5 backdrop-blur-sm border border-white/5">
-                <span className="text-[7px] font-bold text-zinc-500 uppercase mb-1.5 tracking-widest">{f.day}</span>
-                <f.icon size={20} className={f.condition === 'Rain' ? 'text-blue-400' : 'text-amber-400'} />
-                <span className="text-sm font-bold mt-1.5">{f.temp}°C</span>
-                <span className="text-[8px] font-medium text-zinc-400 mt-0.5">{f.condition}</span>
+              <div key={i} className={`flex flex-col items-center text-center p-2 rounded-xl backdrop-blur-md border transition-all ${i === 0 ? 'bg-white/10 border-white/20 shadow-xl' : 'bg-white/5 border-white/5 opacity-60'}`}>
+                <span className="text-[6px] font-black text-zinc-400 uppercase mb-1 tracking-widest">{f.day}</span>
+                <f.icon size={16} className={f.condition === 'Rain' ? 'text-blue-400' : 'text-amber-400'} />
+                <span className="text-sm font-black mt-1">{f.temp}°C</span>
+                <span className="text-[7px] font-bold text-zinc-500 mt-0.5 uppercase tracking-tighter">{f.condition}</span>
               </div>
             ))}
           </div>
 
           {sensors.temp > 30 && (
-            <div className="mt-4 pt-4 border-t border-white/10 flex items-start gap-2.5 text-amber-400 bg-amber-400/5 -mx-4 px-4 pb-1">
-              <AlertCircle size={14} className="mt-0.5" />
-              <p className="text-[10px] font-bold leading-relaxed">Heatwave warning: Increase watering frequency for your Tomato plants tomorrow.</p>
+            <div className="mt-3 p-2 bg-amber-400/10 border border-amber-400/20 rounded-lg flex items-start gap-2 text-amber-400">
+              <AlertCircle size={12} className="mt-0.5 shrink-0" />
+              <p className="text-[8px] font-bold leading-relaxed">
+                {t('heatwave_alert')}
+              </p>
             </div>
           )}
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 mb-6">
+      <div className="grid grid-cols-2 gap-3 mb-5">
         <SensorCard
           title={t('soil_moisture')}
           value={Math.round(sensors.moisture)}
@@ -392,6 +416,7 @@ export default function DashboardScreen({ onNavigate, onAskAI }: { onNavigate: (
           icon={Droplets}
           status={getStatus('moisture', sensors.moisture)}
           subtitle={timeSinceWatered ? `${t('last_watered')}: ${timeSinceWatered}` : t('no_data')}
+          trend={-5}
         />
         <SensorCard
           title={t('temperature')}
@@ -399,6 +424,8 @@ export default function DashboardScreen({ onNavigate, onAskAI }: { onNavigate: (
           unit="°C"
           icon={Thermometer}
           status={getStatus('temp', sensors.temp)}
+          subtitle={sensors.apparentTemp ? `${t('feels_like')} ${Math.round(sensors.apparentTemp)}°C` : undefined}
+          trend={2}
         />
         <SensorCard
           title={t('humidity')}
@@ -406,6 +433,7 @@ export default function DashboardScreen({ onNavigate, onAskAI }: { onNavigate: (
           unit="%"
           icon={Wind}
           status={getStatus('humidity', sensors.humidity)}
+          trend={-1}
         />
         <SensorCard
           title={t('light_level')}
@@ -413,61 +441,62 @@ export default function DashboardScreen({ onNavigate, onAskAI }: { onNavigate: (
           unit="%"
           icon={Sun}
           status={getStatus('light', sensors.light)}
+          trend={12}
         />
       </div>
 
-      {/* Disease Alerts Section - Single Icon/Button */}
-      <div className="mb-8">
-        <button 
-          onClick={() => setIsAlertsModalOpen(true)}
-          className="w-full bg-white p-5 rounded-[2rem] border-2 border-red-50 shadow-xl shadow-red-100/20 flex items-center justify-between group active:scale-[0.98] transition-all relative overflow-hidden"
-        >
-          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-            <AlertCircle size={60} className="text-red-600" />
-          </div>
-          <div className="flex items-center gap-4 relative z-10">
-            <div className="w-12 h-12 bg-red-100 rounded-2xl flex items-center justify-center text-red-600 shadow-inner">
-              <AlertCircle size={24} />
-            </div>
-            <div className="text-left">
-              <h3 className="font-bold text-zinc-900">{t('disease_alerts')}</h3>
-              <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest mt-0.5">
-                {diseaseAlerts.length + reports.length} {t('active_threats')}
-              </p>
-            </div>
-          </div>
-          <div className="w-8 h-8 bg-zinc-50 rounded-full flex items-center justify-center text-zinc-400 group-hover:bg-red-500 group-hover:text-white transition-all">
-            <ChevronRight size={18} />
-          </div>
-        </button>
-      </div>
-
-      {/* Action Button */}
-      <div className="flex justify-center mb-6">
+      {/* Action Button - Moved here */}
+      <div className="flex justify-center mb-5">
         <button 
           onClick={waterPlant}
-          className="group relative bg-white border-2 border-blue-100 text-blue-600 px-6 py-3 rounded-[1.5rem] text-xs font-bold flex items-center gap-3 active:scale-95 transition-all hover:bg-blue-50 hover:border-blue-200 shadow-xl shadow-blue-100/50"
+          className="group relative bg-white border-2 border-blue-100 text-blue-600 px-5 py-2.5 rounded-2xl text-[10px] font-bold flex items-center gap-2.5 active:scale-95 transition-all hover:bg-blue-50 hover:border-blue-200 shadow-lg shadow-blue-100/50"
         >
-          <div className="w-7 h-7 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
-            <Droplets size={16} />
+          <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+            <Droplets size={14} />
           </div>
           {t('watered_plant')}
         </button>
       </div>
 
+      {/* Disease Alerts Section */}
+      <div className="mb-6">
+        <button 
+          onClick={() => setIsAlertsModalOpen(true)}
+          className="w-full bg-white p-4 rounded-[1.5rem] border-2 border-red-50 shadow-lg shadow-red-100/20 flex items-center justify-between group active:scale-[0.98] transition-all relative overflow-hidden"
+        >
+          <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
+            <AlertCircle size={50} className="text-red-600" />
+          </div>
+          <div className="flex items-center gap-3 relative z-10">
+            <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center text-red-600 shadow-inner">
+              <AlertCircle size={20} />
+            </div>
+            <div className="text-left">
+              <h3 className="text-sm font-bold text-zinc-900">{t('disease_alerts')}</h3>
+              <p className="text-[9px] text-zinc-400 font-bold uppercase tracking-widest mt-0.5">
+                {diseaseAlerts.length + reports.length} {t('active_threats')}
+              </p>
+            </div>
+          </div>
+          <div className="w-7 h-7 bg-zinc-50 rounded-full flex items-center justify-center text-zinc-400 group-hover:bg-red-500 group-hover:text-white transition-all">
+            <ChevronRight size={16} />
+          </div>
+        </button>
+      </div>
+
       {/* Plant Search & Suggestions */}
-      <section className="mb-8">
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-bold text-emerald-950">{t('plant_suitability')}</h2>
-          <div className="flex items-center gap-2 px-2.5 py-1 bg-emerald-50 rounded-full">
-            <Leaf size={12} className="text-emerald-600" />
-            <span className="text-[9px] font-black text-emerald-700 uppercase tracking-widest">
+      <section className="mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-base font-bold text-emerald-950">{t('plant_suitability')}</h2>
+          <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-50 rounded-full">
+            <Leaf size={10} className="text-emerald-600" />
+            <span className="text-[8px] font-black text-emerald-700 uppercase tracking-widest">
               {Math.min(3, suggestions.length + extraSuggestions.length)} {t('analysis')}
             </span>
           </div>
         </div>
 
-        <form onSubmit={handleAddPlantSubmit} className="mb-6 relative">
+        <form onSubmit={handleAddPlantSubmit} className="mb-5 relative">
           <input
             type="text"
             value={newPlantName}
@@ -476,97 +505,114 @@ export default function DashboardScreen({ onNavigate, onAskAI }: { onNavigate: (
               if (searchError) setSearchError(null);
             }}
             placeholder={t('search_suitability_placeholder')}
-            className={`w-full bg-white border-2 ${searchError ? 'border-red-200' : 'border-zinc-100'} rounded-2xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all shadow-sm pr-14`}
+            className={`w-full bg-white border-2 ${searchError ? 'border-red-200' : 'border-zinc-100'} rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all shadow-sm pr-12`}
           />
           <button
             type="submit"
             disabled={!newPlantName.trim() || isSearching}
-            className="absolute right-1.5 top-1.5 bottom-1.5 bg-zinc-900 text-white px-3.5 rounded-xl shadow-lg active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center"
+            className="absolute right-1 top-1 bottom-1 bg-zinc-900 text-white px-3 rounded-lg shadow-lg active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center"
           >
-            {isSearching ? <Loader2 size={18} className="animate-spin" /> : <Plus size={18} />}
+            {isSearching ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
           </button>
           {searchError && (
             <motion.p 
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-[9px] text-red-500 font-bold mt-2 ml-3 flex items-center gap-2"
+              className="text-[8px] text-red-500 font-bold mt-1.5 ml-2 flex items-center gap-1.5"
             >
-              <AlertCircle size={12} /> {searchError}
+              <AlertCircle size={10} /> {searchError}
             </motion.p>
           )}
         </form>
         
-        <div className="space-y-4">
-          {(suggestions.length > 0 || extraSuggestions.length > 0) ? (
-            [...extraSuggestions, ...suggestions].slice(0, 3).map((plant: any, idx: number) => {
-              const { isSuitable, isConditional, reason, tip } = getSuitabilityInfo(plant);
+        <div className="space-y-3">
+          {(suggestions.length > 0 || extraSuggestions.length > 0 || allPlants.length > 0) ? (
+            [...extraSuggestions, ...(suggestions.length > 0 ? suggestions : allPlants.slice(0, 2))].slice(0, 3).map((plant: any, idx: number) => {
+              const { isSuitable, isConditional, isBalconySuitable, reason, tip } = getSuitabilityInfo(plant);
               return (
                 <motion.div
                   key={plant.name + idx}
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: idx * 0.1 }}
-                  className="bg-white p-5 rounded-[1.75rem] border border-zinc-100 shadow-sm hover:shadow-md transition-shadow"
+                  className="bg-white p-4 rounded-2xl border border-zinc-100 shadow-sm hover:shadow-md transition-shadow"
                 >
-                  <div className="flex items-start gap-4 mb-5">
-                    <div className={`w-12 h-12 shrink-0 ${
-                      isSuitable && !isConditional ? 'bg-emerald-50 text-emerald-600' : 
-                      isConditional ? 'bg-blue-50 text-blue-600' : 'bg-amber-50 text-amber-600'
-                    } rounded-3xl flex items-center justify-center shadow-inner`}>
-                      <Leaf size={24} />
+                  <div className="flex items-start gap-3 mb-4">
+                    <div className={`w-10 h-10 shrink-0 ${
+                      isSuitable && !isConditional && isBalconySuitable ? 'bg-emerald-50 text-emerald-600' : 
+                      (!isBalconySuitable || !isSuitable) ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-600'
+                    } rounded-2xl flex items-center justify-center shadow-inner`}>
+                      <Leaf size={20} />
                     </div>
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <h3 className="text-base font-bold text-zinc-900">{plant.name}</h3>
-                        <span className={`text-[9px] font-black px-2.5 py-1 rounded-xl uppercase tracking-widest ${
-                          isSuitable && !isConditional ? 'bg-emerald-100 text-emerald-700' : 
-                          isConditional ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
+                      <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                        <h3 className="text-sm font-bold text-zinc-900">{t(plant.name.toLowerCase().replace(/\s+/g, '_').replace(/\(.*\)/, '').trim())}</h3>
+                        <span className={`text-[8px] font-black px-2 py-0.5 rounded-lg uppercase tracking-widest ${
+                          isSuitable && !isConditional && isBalconySuitable ? 'bg-emerald-100 text-emerald-700' : 
+                          (!isBalconySuitable || !isSuitable) ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
                         }`}>
-                          {isSuitable && !isConditional ? t('suitable') : 
+                          {isSuitable && !isConditional && isBalconySuitable ? t('suitable') : 
+                           !isBalconySuitable ? t('not_for_balcony') :
                            isConditional ? t('conditional') : t('needs_care')}
                         </span>
                       </div>
-                      <p className="text-xs text-zinc-500 font-medium leading-relaxed">{plant.description}</p>
+                      <p className="text-[10px] text-zinc-500 font-medium leading-relaxed">{t(plant.name.toLowerCase().replace(/\s+/g, '_').replace(/\(.*\)/, '').trim() + '_desc')}</p>
                     </div>
                   </div>
 
-                  {(isConditional || !isSuitable) && (
-                    <div className={`${isConditional ? 'bg-blue-50/50 border-blue-100' : 'bg-amber-50/50 border-amber-100'} border p-3.5 rounded-3xl flex items-start gap-3.5 mb-5`}>
-                      <div className={`w-8 h-8 shrink-0 ${isConditional ? 'bg-blue-100 text-blue-600' : 'bg-amber-100 text-amber-600'} rounded-2xl flex items-center justify-center`}>
-                        {isConditional ? <Sparkles size={16} /> : <AlertCircle size={16} />}
+                  {!isBalconySuitable && (
+                    <div className="bg-red-50 border border-red-100 p-3 rounded-2xl flex items-start gap-3 mb-4">
+                      <div className="w-7 h-7 shrink-0 bg-red-100 text-red-600 rounded-xl flex items-center justify-center">
+                        <AlertCircle size={14} />
                       </div>
                       <div>
-                        <h5 className={`text-[10px] font-black ${isConditional ? 'text-blue-800' : 'text-amber-800'} uppercase tracking-widest mb-1`}>
-                          {isConditional ? t('seasonal_advice') : t('care_strategy')}
+                        <h5 className="text-[9px] font-black text-red-800 uppercase tracking-widest mb-0.5">
+                          {t('balcony_warning')}
                         </h5>
-                        <p className={`text-xs font-medium ${isConditional ? 'text-blue-700' : 'text-amber-700'} leading-relaxed`}>{tip}</p>
+                        <p className="text-[10px] font-medium text-red-700 leading-relaxed">
+                          {t('balcony_warning_desc')}
+                        </p>
                       </div>
                     </div>
                   )}
 
-                  <div className="grid grid-cols-2 gap-4 pt-4 border-t border-zinc-50">
+                  {(isConditional || (!isSuitable && isBalconySuitable)) && (
+                    <div className={`${isConditional ? 'bg-blue-50/50 border-blue-100' : 'bg-amber-50/50 border-amber-100'} border p-3 rounded-2xl flex items-start gap-3 mb-4`}>
+                      <div className={`w-7 h-7 shrink-0 ${isConditional ? 'bg-blue-100 text-blue-600' : 'bg-amber-100 text-amber-600'} rounded-xl flex items-center justify-center`}>
+                        {isConditional ? <Sparkles size={14} /> : <AlertCircle size={14} />}
+                      </div>
+                      <div>
+                        <h5 className={`text-[9px] font-black ${isConditional ? 'text-blue-800' : 'text-amber-800'} uppercase tracking-widest mb-0.5`}>
+                          {isConditional ? t('seasonal_advice') : t('care_strategy')}
+                        </h5>
+                        <p className={`text-[10px] font-medium ${isConditional ? 'text-blue-700' : 'text-amber-700'} leading-relaxed`}>{tip}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-3 pt-3 border-t border-zinc-50">
                     <div>
-                      <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">{t('growth_cycle')}</h4>
-                      <p className="text-xs font-bold text-zinc-800">{plant.growthTime}</p>
+                      <h4 className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-1">{t('growth_cycle')}</h4>
+                      <p className="text-[10px] font-bold text-zinc-800">{plant.growthTime}</p>
                     </div>
                     <div>
-                      <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">{t('best_months')}</h4>
-                      <p className="text-xs font-bold text-zinc-800">{plant.suitableMonths}</p>
+                      <h4 className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-1">{t('best_months')}</h4>
+                      <p className="text-[10px] font-bold text-zinc-800">{plant.suitableMonths}</p>
                     </div>
                     <div className="col-span-2">
-                      <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">{t('key_requirements')}</h4>
-                      <p className="text-xs font-medium text-zinc-600 leading-relaxed italic">"{plant.needs}"</p>
+                      <h4 className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-1">{t('key_requirements')}</h4>
+                      <p className="text-[10px] font-medium text-zinc-600 leading-relaxed italic">"{plant.needs}"</p>
                     </div>
                   </div>
                 </motion.div>
               );
             })
           ) : (
-            <div className="bg-zinc-50 border-2 border-dashed border-zinc-200 p-10 rounded-[2.5rem] text-center">
-              <div className="w-16 h-16 bg-white rounded-3xl flex items-center justify-center text-zinc-300 mx-auto mb-4 shadow-sm">
-                <Leaf size={32} />
+            <div className="bg-zinc-50 border-2 border-dashed border-zinc-200 p-8 rounded-2xl text-center">
+              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-zinc-300 mx-auto mb-3 shadow-sm">
+                <Leaf size={24} />
               </div>
-              <p className="text-sm text-zinc-500 font-medium px-6">
+              <p className="text-xs text-zinc-500 font-medium px-6">
                 {t('search_suitability_empty')}
               </p>
             </div>
@@ -578,33 +624,90 @@ export default function DashboardScreen({ onNavigate, onAskAI }: { onNavigate: (
       <motion.div 
         whileHover={{ scale: 1.01 }}
         onClick={() => onNavigate('tracker')}
-        className="bg-emerald-950 rounded-3xl p-6 text-white cursor-pointer relative overflow-hidden shadow-2xl shadow-emerald-900/20 mb-8"
+        className="bg-emerald-950 rounded-[1.75rem] p-5 text-white cursor-pointer relative overflow-hidden shadow-xl shadow-emerald-900/40 mb-8 group"
       >
-        <div className="absolute top-0 right-0 p-6 opacity-10">
-          <TrendingUp size={70} />
+        <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+          <TrendingUp size={80} />
         </div>
         <div className="relative z-10">
-          <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-emerald-500 mb-4">{t('financial_performance')}</h3>
-          <div className="flex justify-between items-end">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-emerald-500">{t('expenses_tracker')}</h3>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-6 mb-4">
             <div>
-              <p className="text-[10px] font-bold text-emerald-400/60 uppercase tracking-widest mb-1">{t('total_investment')}</p>
-              <p className="text-2xl font-black">
-                ₹{expenses.reduce((sum, e) => sum + e.amount, 0).toFixed(2)}
+              <p className="text-[9px] font-bold text-emerald-400/60 uppercase tracking-widest mb-1">{t('total_spent')}</p>
+              <p className="text-2xl font-black tracking-tight">
+                ₹{expenses.reduce((sum, e) => sum + e.amount, 0).toFixed(0)}
               </p>
             </div>
             <div className="text-right">
-              <p className="text-[10px] font-bold text-emerald-400/60 uppercase tracking-widest mb-1">{t('projected_savings')}</p>
-              <p className="text-2xl font-black text-emerald-400">
-                +₹{(expenses.reduce((sum, e) => sum + e.amount, 0) * 1.5).toFixed(2)}
+              <p className="text-[9px] font-bold text-emerald-400/60 uppercase tracking-widest mb-1">{t('estimated_yield')}</p>
+              <p className="text-2xl font-black text-emerald-400 tracking-tight">
+                +₹{(expenses.reduce((sum, e) => sum + e.amount, 0) * 1.45).toFixed(0)}
               </p>
             </div>
           </div>
-          <div className="mt-4 pt-4 border-t border-white/10 flex items-center justify-between">
-            <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest">{t('efficiency_score')}</span>
-            <span className="text-xs font-black text-emerald-400">{efficiencyScore}%</span>
+
+          <div className="space-y-2">
+            <div className="flex justify-between items-end">
+              <span className="text-[8px] font-bold text-emerald-500 uppercase tracking-widest">{t('return_on_investment')}</span>
+              <span className="text-xs font-black text-emerald-400">145%</span>
+            </div>
+            <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+              <motion.div 
+                initial={{ width: 0 }}
+                animate={{ width: '75%' }}
+                className="h-full bg-emerald-400 rounded-full shadow-[0_0_12px_rgba(52,211,153,0.4)]"
+              />
+            </div>
+          </div>
+
+          <div className="mt-4 pt-4 border-t border-white/10 flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                <span className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest">{t('efficiency_score')}</span>
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowEfficiencyInfo(!showEfficiencyInfo);
+                  }}
+                  className="text-zinc-500 hover:text-emerald-400 transition-colors"
+                >
+                  <HelpCircle size={10} />
+                </button>
+              </div>
+              <span className="text-[10px] font-black text-emerald-400">{efficiencyScore}%</span>
+            </div>
+            
+            <AnimatePresence>
+              {showEfficiencyInfo && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden"
+                >
+                  <p className="text-[8px] font-medium text-zinc-400 leading-relaxed bg-white/5 p-2 rounded-lg border border-white/5">
+                    {t('efficiency_score_desc')}
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </motion.div>
+
+      {/* Floating AI Button */}
+      <motion.button
+        whileHover={{ scale: 1.1, rotate: 5 }}
+        whileTap={{ scale: 0.9 }}
+        onClick={() => onAskAI('')}
+        className="fixed bottom-24 right-6 w-14 h-14 bg-emerald-600 text-white rounded-full flex items-center justify-center shadow-2xl shadow-emerald-900/40 z-40 border-4 border-white"
+      >
+        <Sparkles size={24} />
+      </motion.button>
 
       {/* Global Search Modal */}
       <AnimatePresence>
@@ -774,17 +877,10 @@ export default function DashboardScreen({ onNavigate, onAskAI }: { onNavigate: (
               <div className="space-y-6">
                 <div>
                   <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Quick Links</h4>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button 
-                      onClick={() => { onNavigate('community'); setIsSearchModalOpen(false); }}
-                      className="p-4 bg-emerald-50 rounded-3xl flex flex-col gap-2 items-start text-left border border-emerald-100"
-                    >
-                      <ShoppingBag size={20} className="text-emerald-600" />
-                      <span className="text-xs font-bold text-emerald-900">Agri Shop</span>
-                    </button>
+                  <div className="grid grid-cols-1 gap-3">
                     <button 
                       onClick={() => { onNavigate('disease'); setIsSearchModalOpen(false); }}
-                      className="p-4 bg-blue-50 rounded-3xl flex flex-col gap-2 items-start text-left border border-blue-100"
+                      className="p-4 bg-blue-50 rounded-3xl flex flex-col gap-2 items-start text-left border border-blue-100 w-full"
                     >
                       <Camera size={20} className="text-blue-600" />
                       <span className="text-xs font-bold text-blue-900">Disease ID</span>

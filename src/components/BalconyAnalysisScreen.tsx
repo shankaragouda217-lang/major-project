@@ -3,8 +3,9 @@ import { Camera, Upload, Send, Leaf, Info, MapPin, Sun, X, RefreshCw } from 'luc
 import { motion, AnimatePresence } from 'motion/react';
 import { useApp } from '../AppContext';
 import { GoogleGenAI, Type } from "@google/genai";
+import { getAIErrorKey } from '../services/geminiService';
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
 export default function BalconyAnalysisScreen() {
   const { addToHistory } = useApp();
@@ -107,9 +108,10 @@ export default function BalconyAnalysisScreen() {
             1. Estimate the balcony dimensions (width, depth) based on visual cues (tiles, railings, furniture). If the user provided dimensions, verify them against the image and use them as the primary source of truth.
             2. Determine if it is physically and environmentally FEASIBLE to grow these specific plants (especially large ones like Mango trees) in this space.
             3. If a plant is NOT feasible (e.g., a standard Mango tree in a 2ft balcony, or a sun-loving plant in a full-shade balcony), you MUST state it is "Not Feasible" and explain why.
-            4. For feasible plants, provide precise placement and sunlight levels.
-            
-            Avoid using hedging language. State your measurements and feasibility as expert-level facts.`
+            4. For feasible plants, provide precise placement and sunlight levels. 
+               CRITICAL: Be extremely specific about spatial placement relative to common furniture or features (e.g., "Place the Tomato pot 2 feet in front of the sofa on the right side", "Position the Chilli plant directly on the windowsill to the left of the door").
+            5. Explain WHY each spot is optimal (e.g., "This spot gets 6 hours of direct morning sun").
+            6. Provide a summary of the balcony's potential.`
           }
         ],
         config: {
@@ -156,8 +158,10 @@ export default function BalconyAnalysisScreen() {
           image: image 
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Balcony Analysis Error:", error);
+      const errorKey = getAIErrorKey(error);
+      setError(errorKey === 'ai_error_api_key' ? 'API key is missing or invalid. Please check your settings.' : 'Failed to analyze balcony. Please try again.');
     } finally {
       setIsAnalyzing(false);
     }

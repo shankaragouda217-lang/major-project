@@ -50,6 +50,19 @@
 //   - image: string (optional)
 //   - timestamp: string (required, ISO date)
 //
+// Collection: reports
+// Document ID: {reportId}
+// Fields:
+//   - id: string (required)
+//   - userId: string (required)
+//   - userName: string (required)
+//   - plantName: string (required)
+//   - status: string (required, enum)
+//   - description: string (required)
+//   - image: string (optional)
+//   - timestamp: number (required)
+//   - location: string (optional)
+//
 // Collection: community_posts
 // Document ID: {postId}
 // Fields:
@@ -110,6 +123,17 @@ service cloud.firestore {
              (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() < 2000)) &&
              (!('sensors' in data) || (data.sensors is map)) &&
              (!('lastAnalysis' in data) || (data.lastAnalysis is map));
+    }
+
+    function isValidReport(data) {
+      return data.keys().hasAll(['userId', 'userName', 'plantName', 'status', 'description', 'timestamp']) &&
+             data.userId == request.auth.uid &&
+             data.userName is string && data.userName.size() > 0 &&
+             data.plantName is string && data.plantName.size() > 0 &&
+             data.status in ['Healthy', 'Leaf Spot', 'Yellow Leaf', 'Fungus', 'Pest Infestation', 'Beneficial Insects Found', 'Unknown', 'Infected', 'Needs Attention'] &&
+             data.description is string && data.description.size() > 0 && data.description.size() < 5000 &&
+             data.timestamp is number &&
+             (!('image' in data) || (data.image is string && data.image.size() < 1000000));
     }
 
     function isValidPost(data) {
@@ -177,6 +201,13 @@ service cloud.firestore {
       allow create: if isAuthenticated() && isValidPost(request.resource.data);
       allow update: if isAuthenticated() && request.auth.uid == resource.data.authorId && isValidPost(request.resource.data);
       allow delete: if isAuthenticated() && request.auth.uid == resource.data.authorId;
+    }
+
+    match /reports/{reportId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidReport(request.resource.data);
+      allow update: if isAuthenticated() && request.auth.uid == resource.data.userId && isValidReport(request.resource.data);
+      allow delete: if isAuthenticated() && request.auth.uid == resource.data.userId;
     }
   }
 }

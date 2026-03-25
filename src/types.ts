@@ -6,4 +6,9 @@ export interface PlantAnalysisResult {
   description: string;
   symptoms?: string;
   treatment?: string;
+  detailedAnalysis?: string;
+  fertilizerSuggestion?: string;
+  soilAdvice?: string;
+  checklist?: string[];
+  why?: string;
 }

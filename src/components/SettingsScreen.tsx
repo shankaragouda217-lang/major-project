@@ -29,27 +29,31 @@ const SettingItem = ({ icon: Icon, label, value, onChange, type = 'toggle' }: an
   </div>
 );
 
-export default function SettingsScreen() {
-  const { user, userData, history, clearHistory, deleteMultipleHistoryItems, updateSettings, t } = useApp();
+export default function SettingsScreen({ onNavigate }: { onNavigate: (s: any) => void }) {
+  const { 
+    user, userData, history, clearHistory, deleteMultipleHistoryItems, 
+    updateSettings, t, requestNotificationPermission, notificationPermission 
+  } = useApp();
   const [showHistory, setShowHistory] = useState(false);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [showEditProfile, setShowEditProfile] = useState(false);
-  const [showHelp, setShowHelp] = useState(false);
   const [showLanguage, setShowLanguage] = useState(false);
   const [newDisplayName, setNewDisplayName] = useState(userData?.displayName || '');
 
   const handleUpdateSettings = async (key: string, value: any) => {
+    if (key === 'notifications' && value === true && notificationPermission !== 'granted') {
+      const permission = await requestNotificationPermission();
+      if (permission !== 'granted') return;
+    }
     await updateSettings({ [key]: value });
   };
 
   const handleClearHistory = async () => {
-    if (window.confirm('Are you sure you want to clear all history? This cannot be undone.')) {
-      await clearHistory();
-      setIsSelectionMode(false);
-      setSelectedItems([]);
-      setShowHistory(false);
-    }
+    await clearHistory();
+    setIsSelectionMode(false);
+    setSelectedItems([]);
+    setShowHistory(false);
   };
 
   const toggleItemSelection = (id: string) => {
@@ -60,11 +64,9 @@ export default function SettingsScreen() {
 
   const handleDeleteSelected = async () => {
     if (selectedItems.length === 0) return;
-    if (window.confirm(`Are you sure you want to delete ${selectedItems.length} selected items?`)) {
-      await deleteMultipleHistoryItems(selectedItems);
-      setSelectedItems([]);
-      setIsSelectionMode(false);
-    }
+    await deleteMultipleHistoryItems(selectedItems);
+    setSelectedItems([]);
+    setIsSelectionMode(false);
   };
 
   const handleUpdateProfile = async () => {
@@ -141,7 +143,7 @@ export default function SettingsScreen() {
           icon={HelpCircle} 
           label={t('help_support')} 
           type="action" 
-          onChange={() => setShowHelp(true)} 
+          onChange={() => onNavigate('help')} 
         />
       </div>
 
@@ -400,44 +402,7 @@ export default function SettingsScreen() {
         )}
       </AnimatePresence>
 
-      {/* Help & Support Modal */}
-      <AnimatePresence>
-        {showHelp && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6"
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white w-full max-w-sm rounded-[40px] p-8"
-            >
-              <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                <HelpCircle size={32} />
-              </div>
-              <h3 className="text-xl font-bold text-zinc-900 mb-4 text-center">Help & Support</h3>
-              <div className="space-y-4 mb-8 text-center">
-                <p className="text-sm text-zinc-500 leading-relaxed">
-                  Need help with your garden? You can use the <strong>Ask Garden AI</strong> feature on the home screen for instant advice.
-                </p>
-                <p className="text-sm text-zinc-500 leading-relaxed">
-                  For technical issues, contact us at:<br/>
-                  <span className="font-bold text-emerald-600">support@gardenintelligence.com</span>
-                </p>
-              </div>
-              <button 
-                onClick={() => setShowHelp(false)}
-                className="w-full p-4 bg-zinc-900 text-white font-bold rounded-2xl"
-              >
-                Close
-              </button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Help & Support Modal - Removed in favor of dedicated screen */}
     </div>
   );
 }

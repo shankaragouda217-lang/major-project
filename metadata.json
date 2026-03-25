@@ -1,5 +1,5 @@
 {
-  "name": "Smart Urban Farming Assistant",
+  "name": "Smart Urban Farming",
   "description": "A modern mobile app to help urban gardeners monitor plant health, track environmental conditions, and receive smart care suggestions.",
   "requestFramePermissions": ["camera", "geolocation"]
 }

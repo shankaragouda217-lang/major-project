@@ -19,3 +19,23 @@ body {
 .bg-glass {
   @apply bg-white/80 backdrop-blur-md;
 }
+
+.markdown-body {
+  @apply text-inherit;
+}
+
+.markdown-body p {
+  @apply mb-2 last:mb-0;
+}
+
+.markdown-body strong {
+  @apply font-bold;
+}
+
+.markdown-body ul {
+  @apply list-disc ml-4 mb-2;
+}
+
+.markdown-body ol {
+  @apply list-decimal ml-4 mb-2;
+}

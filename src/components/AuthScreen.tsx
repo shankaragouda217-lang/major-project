@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { auth } from '../firebase';
+import { useApp } from '../AppContext';
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
@@ -11,6 +12,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, Mail, Lock, User, Eye, EyeOff, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react';
 
 export default function AuthScreen({ onBack }: { onBack: () => void }) {
+  const { t } = useApp();
   const [isLogin, setIsLogin] = useState(true);
   const [isReset, setIsReset] = useState(false);
   const [email, setEmail] = useState('');
@@ -83,7 +85,7 @@ export default function AuthScreen({ onBack }: { onBack: () => void }) {
         onClick={isReset ? () => setIsReset(false) : onBack} 
         className="mb-8 text-emerald-600 flex items-center gap-2 hover:opacity-70 transition-opacity"
       >
-        <ArrowLeft size={20} /> Back
+        <ArrowLeft size={20} /> {t('auth_back')}
       </button>
 
       <motion.div
@@ -92,12 +94,12 @@ export default function AuthScreen({ onBack }: { onBack: () => void }) {
         key={isReset ? 'reset' : (isLogin ? 'login' : 'signup')}
       >
         <h2 className="text-3xl font-bold mb-2 text-emerald-800">
-          {isReset ? 'Reset Password' : (isLogin ? 'Welcome Back' : 'Create Account')}
+          {isReset ? t('auth_reset_password') : (isLogin ? t('auth_welcome_back') : t('auth_create_account'))}
         </h2>
         <p className="text-zinc-500 mb-8">
           {isReset 
-            ? 'Enter your email to receive a reset link' 
-            : (isLogin ? 'Sign in to monitor your garden' : 'Start your urban farming journey')}
+            ? t('auth_reset_desc') 
+            : (isLogin ? t('auth_signin_desc') : t('auth_signup_desc'))}
         </p>
       </motion.div>
 
@@ -106,7 +108,7 @@ export default function AuthScreen({ onBack }: { onBack: () => void }) {
           <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={20} />
           <input
             type="email"
-            placeholder="Email"
+            placeholder={t('auth_email')}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="w-full bg-white border border-zinc-200 rounded-2xl py-4 pl-12 pr-4 focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
@@ -119,7 +121,7 @@ export default function AuthScreen({ onBack }: { onBack: () => void }) {
             <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={20} />
             <input
               type={showPassword ? "text" : "password"}
-              placeholder="Password"
+              placeholder={t('auth_password')}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full bg-white border border-zinc-200 rounded-2xl py-4 pl-12 pr-12 focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
@@ -170,7 +172,7 @@ export default function AuthScreen({ onBack }: { onBack: () => void }) {
               }}
               className="text-sm text-emerald-600 font-medium hover:underline"
             >
-              Forgot Password?
+              {t('auth_forgot_password')}
             </button>
           </div>
         )}
@@ -183,7 +185,7 @@ export default function AuthScreen({ onBack }: { onBack: () => void }) {
           {loading ? (
             <RefreshCw size={20} className="animate-spin" />
           ) : (
-            isReset ? 'Send Reset Link' : (isLogin ? 'Sign In' : 'Sign Up')
+            isReset ? t('auth_send_reset') : (isLogin ? t('auth_signin') : t('auth_signup'))
           )}
         </button>
 
@@ -215,7 +217,7 @@ export default function AuthScreen({ onBack }: { onBack: () => void }) {
                 <div className="w-full border-t border-zinc-200"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-emerald-50 text-zinc-400">or continue with</span>
+                <span className="px-4 bg-emerald-50 text-zinc-400">{t('auth_or_continue')}</span>
               </div>
             </div>
 
@@ -226,7 +228,7 @@ export default function AuthScreen({ onBack }: { onBack: () => void }) {
               className="w-full bg-white border border-zinc-200 text-zinc-700 font-medium py-4 rounded-2xl shadow-sm hover:bg-zinc-50 active:scale-[0.98] transition-all flex items-center justify-center gap-3"
             >
               <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
-              Sign in with Google
+              {t('auth_google')}
             </button>
           </>
         )}
@@ -242,7 +244,7 @@ export default function AuthScreen({ onBack }: { onBack: () => void }) {
             }}
             className="text-emerald-600 font-medium hover:underline"
           >
-            {isLogin ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
+            {isLogin ? t('auth_no_account') : t('auth_already_account')}
           </button>
         )}
         {isReset && (
@@ -254,7 +256,7 @@ export default function AuthScreen({ onBack }: { onBack: () => void }) {
             }}
             className="text-emerald-600 font-medium hover:underline"
           >
-            Back to Sign In
+            {t('auth_back_to_signin')}
           </button>
         )}
       </div>
