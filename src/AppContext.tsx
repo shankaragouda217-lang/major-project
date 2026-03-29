@@ -109,7 +109,7 @@ interface AppContextType {
   deletePost: (id: string) => Promise<void>;
   addExpense: (expense: any) => Promise<void>;
   deleteExpense: (id: string) => Promise<void>;
-  t: (key: string) => string;
+  t: (key: string, params?: Record<string, string | number>) => string;
   currentLanguage: string;
   requestNotificationPermission: () => Promise<NotificationPermission>;
   notificationPermission: NotificationPermission;
@@ -278,8 +278,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return 'denied';
   };
 
-  const t = (key: string) => {
-    return translations[currentLanguage]?.[key] || translations['en']?.[key] || key;
+  const t = (key: string, params?: Record<string, string | number>) => {
+    let text = translations[currentLanguage]?.[key] || translations['en']?.[key] || key;
+    if (params) {
+      Object.entries(params).forEach(([k, v]) => {
+        text = text.replace(`{${k}}`, String(v));
+      });
+    }
+    return text;
   };
 
   const waterPlant = async () => {
@@ -323,6 +329,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const updateSettings = async (newSettings: any) => {
     if (!user) return;
     try {
+      // Update local state immediately for better UX
+      if (newSettings.language) {
+        setCurrentLanguage(newSettings.language);
+      }
+      
       const userRef = doc(db, 'users', user.uid);
       await updateDoc(userRef, {
         settings: { ...userData?.settings, ...newSettings }
@@ -396,14 +407,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         let area = addr.suburb || addr.city_district || addr.neighbourhood || addr.residential || addr.subdistrict || addr.quarter || addr.allotments || addr.commercial || addr.industrial || addr.hamlet;
         
         if (hasGovindaraja || (area && (area.toLowerCase().includes('thimmenahalli') || area.toLowerCase().includes('thimanahalli')))) {
-          area = "Govindaraja Nagar";
+          area = t("govindaraja_nagar");
         }
         
         const city = addr.city || addr.town || addr.municipality || addr.city_district || addr.state_district || addr.village || "Unknown City";
         
         // Final fallback to ensure the user's specific request is met if we are in Bengaluru
         if (city.toLowerCase().includes('bengaluru') && (!area || area.toLowerCase().includes('thimmenahalli'))) {
-          area = "Govindaraja Nagar";
+          area = t("govindaraja_nagar");
         }
         
         // Ensure we don't show "Bengaluru (Bengaluru)"

@@ -14,7 +14,7 @@ export default function CommunityScreen() {
             <h1 className="text-4xl font-black tracking-tighter text-zinc-900 uppercase">
               Community
             </h1>
-            <p className="text-zinc-500 font-medium">
+            <p className="text-zinc-700 font-medium">
               Real-time updates from local farmers
             </p>
           </div>
@@ -28,9 +28,9 @@ export default function CommunityScreen() {
       >
         {reports.length === 0 ? (
           <div className="text-center py-20 bg-zinc-50 rounded-[40px] border-2 border-dashed border-zinc-200">
-            <Users className="mx-auto text-zinc-300 mb-4" size={48} />
-            <p className="text-zinc-500 font-bold">No community reports yet</p>
-            <p className="text-zinc-400 text-xs mt-1">Be the first to share your plant's health!</p>
+            <Users className="mx-auto text-zinc-700 mb-4" size={48} />
+            <p className="text-zinc-700 font-bold">No community reports yet</p>
+            <p className="text-zinc-800 text-xs mt-1">Be the first to share your plant's health!</p>
           </div>
         ) : (
           reports.map((report) => (
@@ -48,7 +48,7 @@ export default function CommunityScreen() {
                     </div>
                     <div>
                       <h4 className="font-bold text-zinc-900 text-sm">{report.userName}</h4>
-                      <div className="flex items-center gap-2 text-[10px] text-zinc-400 font-bold uppercase tracking-widest">
+                      <div className="flex items-center gap-2 text-[10px] text-zinc-800 font-bold uppercase tracking-widest">
                         <MapPin size={10} /> {report.location}
                         <span className="mx-1">•</span>
                         <Clock size={10} /> {formatDistanceToNow(report.timestamp)} ago
@@ -63,7 +63,7 @@ export default function CommunityScreen() {
                 </div>
                 
                 <h3 className="font-bold text-zinc-900 mb-2">{report.plantName}</h3>
-                <p className="text-sm text-zinc-600 leading-relaxed mb-4">
+                <p className="text-sm text-zinc-800 leading-relaxed mb-4">
                   {report.description}
                 </p>
 
@@ -75,7 +75,7 @@ export default function CommunityScreen() {
 
                 <div className="flex items-center gap-2 p-3 bg-zinc-50 rounded-2xl">
                   <AlertTriangle size={16} className="text-orange-500" />
-                  <p className="text-[11px] text-zinc-500 font-medium">
+                  <p className="text-[11px] text-zinc-900 font-medium">
                     Reported as a potential threat to nearby {report.plantName} crops.
                   </p>
                 </div>

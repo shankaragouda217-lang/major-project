@@ -3,14 +3,14 @@ import { useApp } from '../AppContext';
 import { Droplets, Thermometer, Wind, Sun, Plus, Leaf, CloudRain, Cloud, Zap, AlertCircle, MapPin, TrendingUp, Share2, Maximize, Sparkles, Camera, Loader2, Bell, Search, ShoppingBag, X, ChevronRight, Moon, CloudSun, CloudFog, CloudLightning, Snowflake, CloudDrizzle, RefreshCw, HelpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
-const SensorCard = ({ title, value, unit, icon: Icon, status, subtitle, trend }: any) => {
+const SensorCard = ({ title, value, unit, icon: Icon, status, subtitle }: any) => {
   const { t } = useApp();
   const getStatusColor = () => {
     switch (status) {
       case 'good': return 'bg-emerald-50 text-emerald-700 border-emerald-100';
       case 'moderate': return 'bg-amber-50 text-amber-700 border-amber-100';
       case 'attention': return 'bg-rose-50 text-rose-700 border-rose-100';
-      default: return 'bg-zinc-50 text-zinc-700 border-zinc-100';
+      default: return 'bg-zinc-50 text-zinc-900 border-zinc-100';
     }
   };
 
@@ -18,24 +18,19 @@ const SensorCard = ({ title, value, unit, icon: Icon, status, subtitle, trend }:
     <motion.div
       whileHover={{ y: -4, scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
-      className={`p-4 rounded-[2rem] border-2 ${getStatusColor()} flex flex-col gap-2 transition-all relative overflow-hidden shadow-sm hover:shadow-md`}
+      className={`p-4 rounded-[2rem] border-2 ${getStatusColor()} flex flex-col gap-1 transition-all relative overflow-hidden shadow-sm hover:shadow-md`}
     >
       <div className="flex justify-between items-center">
         <div className={`p-2 rounded-xl ${getStatusColor()} border-0 shadow-inner`}>
           <Icon size={18} />
         </div>
         <div className="flex flex-col items-end">
-          <span className="text-[8px] font-black uppercase tracking-widest opacity-60">{t(status)}</span>
-          {trend && (
-            <div className={`flex items-center gap-0.5 text-[8px] font-black uppercase ${trend > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-              {trend > 0 ? '↑' : '↓'} {Math.abs(trend)}%
-            </div>
-          )}
+          <span className="text-[10px] font-black uppercase tracking-widest opacity-60">{t(status)}</span>
         </div>
       </div>
       <div>
-        <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">{title}</h3>
-        <div className="flex items-baseline gap-1">
+        <h3 className="text-sm font-black text-zinc-600 uppercase tracking-widest mb-0.5">{title}</h3>
+        <div className="flex items-baseline gap-0.5">
           <AnimatePresence mode="wait">
             <motion.p
               key={value}
@@ -47,10 +42,10 @@ const SensorCard = ({ title, value, unit, icon: Icon, status, subtitle, trend }:
               {value}
             </motion.p>
           </AnimatePresence>
-          <span className="text-xs font-black opacity-40">{unit}</span>
+          <span className="text-sm font-black opacity-40">{unit}</span>
         </div>
         {subtitle && (
-          <p className="text-[8px] font-bold opacity-50 mt-1.5 uppercase tracking-tighter line-clamp-1">{subtitle}</p>
+          <p className="text-[10px] font-bold opacity-50 mt-1 uppercase tracking-tighter line-clamp-1">{subtitle}</p>
         )}
       </div>
       <div className="absolute -bottom-2 -right-2 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity">
@@ -329,13 +324,22 @@ export default function DashboardScreen({ onNavigate, onAskAI }: { onNavigate: (
   return (
     <div className="px-4 pt-6 pb-24">
       {/* Header Section */}
-      <header className="flex justify-between items-center mb-5">
-        <div>
-          <h1 className="text-lg font-bold text-emerald-950 tracking-tight">{t('hello')}, {userData?.displayName}!</h1>
-          <p className="text-[10px] text-zinc-500 font-medium">{t('garden_doing_great')}</p>
+      <header className="flex justify-between items-center mb-4">
+        <div className="flex items-center gap-3">
+          <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-md border border-emerald-100 overflow-hidden">
+            <img
+              src="https://iili.io/qD8Qbig.png"
+              alt="Logo"
+              className="w-12 h-12 object-contain"
+              referrerPolicy="no-referrer"
+            />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-emerald-950 tracking-tight leading-tight">{t('hello')}, {userData?.displayName}!</h1>
+          </div>
         </div>
         <div className="flex items-center gap-2">
-          <button className="w-8 h-8 bg-white border border-zinc-200 rounded-full flex items-center justify-center text-zinc-600 hover:bg-zinc-50 transition-colors relative">
+          <button className="w-8 h-8 bg-white border border-zinc-200 rounded-full flex items-center justify-center text-zinc-800 hover:bg-zinc-50 transition-colors relative">
             <Bell size={16} />
             {userData?.settings?.notifications && (
               <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-emerald-500 rounded-full border-2 border-white" />
@@ -349,58 +353,58 @@ export default function DashboardScreen({ onNavigate, onAskAI }: { onNavigate: (
 
 
       {/* Weather & Location Widget */}
-      <div className="mb-5">
+      <div className="mb-4">
         <div className="bg-zinc-900 rounded-[1.75rem] p-4 text-white relative overflow-hidden shadow-xl shadow-zinc-200">
           <div className="absolute top-0 right-0 p-4 opacity-10">
             <MapPin size={50} />
           </div>
           
-          <div className="flex justify-between items-start mb-3 relative z-10">
+          <div className="flex justify-between items-start mb-2 relative z-10">
             <div className="flex-1">
-              <div className="flex items-center gap-1.5 mb-0.5">
+              <div className="flex items-center gap-1 mb-0.5">
                 <div className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                <h3 className="text-[7px] font-black uppercase tracking-[0.2em] text-zinc-500">{t('live_environment')}</h3>
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-700">{t('live_environment')}</h3>
               </div>
               <p className="text-base font-black tracking-tight truncate pr-4">{isLocationEnabled && cityName ? cityName : t('global_sync')}</p>
               {sensors.lastUpdated && (
-                <p className="text-[7px] text-zinc-500 font-bold uppercase tracking-wider mt-0.5">
+                <p className="text-[10px] text-zinc-700 font-bold uppercase tracking-wider mt-0.5">
                   {t('live')} • {new Date(sensors.lastUpdated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </p>
               )}
             </div>
-            <div className="flex flex-col items-end gap-1.5">
+            <div className="flex flex-col items-end gap-1">
               <button 
                 onClick={() => isLocationEnabled ? disableLiveLocation() : enableLiveLocation()}
-                className={`px-2 py-0.5 rounded-md text-[7px] font-black tracking-widest transition-all shadow-lg ${isLocationEnabled ? 'bg-emerald-500 text-white shadow-emerald-500/20' : 'bg-white/10 text-white hover:bg-white/20'}`}
+                className={`px-2 py-0.5 rounded-md text-[10px] font-black tracking-widest transition-all shadow-lg ${isLocationEnabled ? 'bg-emerald-500 text-white shadow-emerald-500/20' : 'bg-white/10 text-white hover:bg-white/20'}`}
               >
                 {isLocationEnabled ? t('location_on') : t('location_off')}
               </button>
               {isLocationEnabled && (
                 <button 
                   onClick={handleRefreshWeather}
-                  className="p-1 bg-white/5 rounded-md text-zinc-400 hover:text-white transition-colors border border-white/5"
+                  className="p-1 bg-white/5 rounded-md text-zinc-600 hover:text-white transition-colors border border-white/5"
                 >
-                  <RefreshCw size={10} />
+                  <RefreshCw size={12} />
                 </button>
               )}
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 relative z-10 mb-3">
+          <div className="grid grid-cols-3 gap-1.5 relative z-10 mb-2">
             {forecast.map((f, i) => (
               <div key={i} className={`flex flex-col items-center text-center p-2 rounded-xl backdrop-blur-md border transition-all ${i === 0 ? 'bg-white/10 border-white/20 shadow-xl' : 'bg-white/5 border-white/5 opacity-60'}`}>
-                <span className="text-[6px] font-black text-zinc-400 uppercase mb-1 tracking-widest">{f.day}</span>
+                <span className="text-[10px] font-black text-zinc-600 uppercase mb-0.5 tracking-widest">{f.day}</span>
                 <f.icon size={16} className={f.condition === 'Rain' ? 'text-blue-400' : 'text-amber-400'} />
-                <span className="text-sm font-black mt-1">{f.temp}°C</span>
-                <span className="text-[7px] font-bold text-zinc-500 mt-0.5 uppercase tracking-tighter">{f.condition}</span>
+                <span className="text-sm font-black mt-0.5">{f.temp}°C</span>
+                <span className="text-[10px] font-bold text-zinc-700 mt-0.5 uppercase tracking-tighter">{f.condition}</span>
               </div>
             ))}
           </div>
 
           {sensors.temp > 30 && (
-            <div className="mt-3 p-2 bg-amber-400/10 border border-amber-400/20 rounded-lg flex items-start gap-2 text-amber-400">
+            <div className="mt-2 p-2 bg-amber-400/10 border border-amber-400/20 rounded-lg flex items-start gap-2 text-amber-400">
               <AlertCircle size={12} className="mt-0.5 shrink-0" />
-              <p className="text-[8px] font-bold leading-relaxed">
+              <p className="text-xs font-bold leading-relaxed">
                 {t('heatwave_alert')}
               </p>
             </div>
@@ -408,7 +412,7 @@ export default function DashboardScreen({ onNavigate, onAskAI }: { onNavigate: (
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 mb-5">
+      <div className="grid grid-cols-2 gap-3 mb-4">
         <SensorCard
           title={t('soil_moisture')}
           value={Math.round(sensors.moisture)}
@@ -416,7 +420,6 @@ export default function DashboardScreen({ onNavigate, onAskAI }: { onNavigate: (
           icon={Droplets}
           status={getStatus('moisture', sensors.moisture)}
           subtitle={timeSinceWatered ? `${t('last_watered')}: ${timeSinceWatered}` : t('no_data')}
-          trend={-5}
         />
         <SensorCard
           title={t('temperature')}
@@ -424,8 +427,6 @@ export default function DashboardScreen({ onNavigate, onAskAI }: { onNavigate: (
           unit="°C"
           icon={Thermometer}
           status={getStatus('temp', sensors.temp)}
-          subtitle={sensors.apparentTemp ? `${t('feels_like')} ${Math.round(sensors.apparentTemp)}°C` : undefined}
-          trend={2}
         />
         <SensorCard
           title={t('humidity')}
@@ -433,7 +434,6 @@ export default function DashboardScreen({ onNavigate, onAskAI }: { onNavigate: (
           unit="%"
           icon={Wind}
           status={getStatus('humidity', sensors.humidity)}
-          trend={-1}
         />
         <SensorCard
           title={t('light_level')}
@@ -441,15 +441,14 @@ export default function DashboardScreen({ onNavigate, onAskAI }: { onNavigate: (
           unit="%"
           icon={Sun}
           status={getStatus('light', sensors.light)}
-          trend={12}
         />
       </div>
 
       {/* Action Button - Moved here */}
-      <div className="flex justify-center mb-5">
+      <div className="flex justify-center mb-4">
         <button 
           onClick={waterPlant}
-          className="group relative bg-white border-2 border-blue-100 text-blue-600 px-5 py-2.5 rounded-2xl text-[10px] font-bold flex items-center gap-2.5 active:scale-95 transition-all hover:bg-blue-50 hover:border-blue-200 shadow-lg shadow-blue-100/50"
+          className="group relative bg-white border-2 border-blue-100 text-blue-600 px-5 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2.5 active:scale-95 transition-all hover:bg-blue-50 hover:border-blue-200 shadow-lg shadow-blue-100/50"
         >
           <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
             <Droplets size={14} />
@@ -459,7 +458,7 @@ export default function DashboardScreen({ onNavigate, onAskAI }: { onNavigate: (
       </div>
 
       {/* Disease Alerts Section */}
-      <div className="mb-6">
+      <div className="mb-5">
         <button 
           onClick={() => setIsAlertsModalOpen(true)}
           className="w-full bg-white p-4 rounded-[1.5rem] border-2 border-red-50 shadow-lg shadow-red-100/20 flex items-center justify-between group active:scale-[0.98] transition-all relative overflow-hidden"
@@ -472,31 +471,31 @@ export default function DashboardScreen({ onNavigate, onAskAI }: { onNavigate: (
               <AlertCircle size={20} />
             </div>
             <div className="text-left">
-              <h3 className="text-sm font-bold text-zinc-900">{t('disease_alerts')}</h3>
-              <p className="text-[9px] text-zinc-400 font-bold uppercase tracking-widest mt-0.5">
+              <h3 className="text-base font-bold text-zinc-900">{t('disease_alerts')}</h3>
+              <p className="text-[10px] text-zinc-800 font-bold uppercase tracking-widest mt-0.5">
                 {diseaseAlerts.length + reports.length} {t('active_threats')}
               </p>
             </div>
           </div>
-          <div className="w-7 h-7 bg-zinc-50 rounded-full flex items-center justify-center text-zinc-400 group-hover:bg-red-500 group-hover:text-white transition-all">
+          <div className="w-7 h-7 bg-zinc-50 rounded-full flex items-center justify-center text-zinc-800 group-hover:bg-red-500 group-hover:text-white transition-all">
             <ChevronRight size={16} />
           </div>
         </button>
       </div>
 
       {/* Plant Search & Suggestions */}
-      <section className="mb-6">
-        <div className="flex items-center justify-between mb-4">
+      <section className="mb-5">
+        <div className="flex items-center justify-between mb-3">
           <h2 className="text-base font-bold text-emerald-950">{t('plant_suitability')}</h2>
           <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-50 rounded-full">
             <Leaf size={10} className="text-emerald-600" />
-            <span className="text-[8px] font-black text-emerald-700 uppercase tracking-widest">
+            <span className="text-[10px] font-black text-emerald-900 uppercase tracking-widest">
               {Math.min(3, suggestions.length + extraSuggestions.length)} {t('analysis')}
             </span>
           </div>
         </div>
 
-        <form onSubmit={handleAddPlantSubmit} className="mb-5 relative">
+        <form onSubmit={handleAddPlantSubmit} className="mb-4 relative">
           <input
             type="text"
             value={newPlantName}
@@ -505,7 +504,7 @@ export default function DashboardScreen({ onNavigate, onAskAI }: { onNavigate: (
               if (searchError) setSearchError(null);
             }}
             placeholder={t('search_suitability_placeholder')}
-            className={`w-full bg-white border-2 ${searchError ? 'border-red-200' : 'border-zinc-100'} rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all shadow-sm pr-12`}
+            className={`w-full bg-white border-2 ${searchError ? 'border-red-200' : 'border-zinc-100'} rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all shadow-sm pr-12`}
           />
           <button
             type="submit"
@@ -518,7 +517,7 @@ export default function DashboardScreen({ onNavigate, onAskAI }: { onNavigate: (
             <motion.p 
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-[8px] text-red-500 font-bold mt-1.5 ml-2 flex items-center gap-1.5"
+              className="text-[10px] text-red-500 font-bold mt-1 ml-2 flex items-center gap-1.5"
             >
               <AlertCircle size={10} /> {searchError}
             </motion.p>
@@ -546,8 +545,12 @@ export default function DashboardScreen({ onNavigate, onAskAI }: { onNavigate: (
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                        <h3 className="text-sm font-bold text-zinc-900">{t(plant.name.toLowerCase().replace(/\s+/g, '_').replace(/\(.*\)/, '').trim())}</h3>
-                        <span className={`text-[8px] font-black px-2 py-0.5 rounded-lg uppercase tracking-widest ${
+                        <h3 className="text-base font-bold text-zinc-900">
+                          {/^[a-zA-Z\s\(\)]+$/.test(plant.name) 
+                            ? t(plant.name.toLowerCase().replace(/\s+/g, '_').replace(/\(.*\)/, '').trim())
+                            : plant.name}
+                        </h3>
+                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg uppercase tracking-widest ${
                           isSuitable && !isConditional && isBalconySuitable ? 'bg-emerald-100 text-emerald-700' : 
                           (!isBalconySuitable || !isSuitable) ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
                         }`}>
@@ -556,7 +559,11 @@ export default function DashboardScreen({ onNavigate, onAskAI }: { onNavigate: (
                            isConditional ? t('conditional') : t('needs_care')}
                         </span>
                       </div>
-                      <p className="text-[10px] text-zinc-500 font-medium leading-relaxed">{t(plant.name.toLowerCase().replace(/\s+/g, '_').replace(/\(.*\)/, '').trim() + '_desc')}</p>
+                      <p className="text-sm text-zinc-900 font-medium leading-relaxed">
+                        {/^[a-zA-Z\s\(\)]+$/.test(plant.name)
+                          ? t(plant.name.toLowerCase().replace(/\s+/g, '_').replace(/\(.*\)/, '').trim() + '_desc')
+                          : plant.description}
+                      </p>
                     </div>
                   </div>
 
@@ -566,10 +573,10 @@ export default function DashboardScreen({ onNavigate, onAskAI }: { onNavigate: (
                         <AlertCircle size={14} />
                       </div>
                       <div>
-                        <h5 className="text-[9px] font-black text-red-800 uppercase tracking-widest mb-0.5">
+                        <h5 className="text-[10px] font-black text-red-950 uppercase tracking-widest mb-0.5">
                           {t('balcony_warning')}
                         </h5>
-                        <p className="text-[10px] font-medium text-red-700 leading-relaxed">
+                        <p className="text-sm font-medium text-red-900 leading-relaxed">
                           {t('balcony_warning_desc')}
                         </p>
                       </div>
@@ -582,26 +589,26 @@ export default function DashboardScreen({ onNavigate, onAskAI }: { onNavigate: (
                         {isConditional ? <Sparkles size={14} /> : <AlertCircle size={14} />}
                       </div>
                       <div>
-                        <h5 className={`text-[9px] font-black ${isConditional ? 'text-blue-800' : 'text-amber-800'} uppercase tracking-widest mb-0.5`}>
+                        <h5 className={`text-[10px] font-black ${isConditional ? 'text-blue-950' : 'text-amber-950'} uppercase tracking-widest mb-0.5`}>
                           {isConditional ? t('seasonal_advice') : t('care_strategy')}
                         </h5>
-                        <p className={`text-[10px] font-medium ${isConditional ? 'text-blue-700' : 'text-amber-700'} leading-relaxed`}>{tip}</p>
+                        <p className={`text-sm font-medium ${isConditional ? 'text-blue-900' : 'text-amber-900'} leading-relaxed`}>{tip}</p>
                       </div>
                     </div>
                   )}
 
                   <div className="grid grid-cols-2 gap-3 pt-3 border-t border-zinc-50">
                     <div>
-                      <h4 className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-1">{t('growth_cycle')}</h4>
-                      <p className="text-[10px] font-bold text-zinc-800">{plant.growthTime}</p>
+                      <h4 className="text-sm font-black text-zinc-800 uppercase tracking-widest mb-0.5">{t('growth_cycle')}</h4>
+                      <p className="text-base font-bold text-zinc-800">{t(plant.growthTime)}</p>
                     </div>
                     <div>
-                      <h4 className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-1">{t('best_months')}</h4>
-                      <p className="text-[10px] font-bold text-zinc-800">{plant.suitableMonths}</p>
+                      <h4 className="text-sm font-black text-zinc-800 uppercase tracking-widest mb-0.5">{t('best_months')}</h4>
+                      <p className="text-base font-bold text-zinc-800">{t(plant.suitableMonths)}</p>
                     </div>
                     <div className="col-span-2">
-                      <h4 className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-1">{t('key_requirements')}</h4>
-                      <p className="text-[10px] font-medium text-zinc-600 leading-relaxed italic">"{plant.needs}"</p>
+                      <h4 className="text-sm font-black text-zinc-800 uppercase tracking-widest mb-0.5">{t('key_requirements')}</h4>
+                      <p className="text-sm font-medium text-zinc-800 leading-relaxed italic">"{t(plant.needs)}"</p>
                     </div>
                   </div>
                 </motion.div>
@@ -609,10 +616,10 @@ export default function DashboardScreen({ onNavigate, onAskAI }: { onNavigate: (
             })
           ) : (
             <div className="bg-zinc-50 border-2 border-dashed border-zinc-200 p-8 rounded-2xl text-center">
-              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-zinc-300 mx-auto mb-3 shadow-sm">
+              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-zinc-500 mx-auto mb-3 shadow-sm">
                 <Leaf size={24} />
               </div>
-              <p className="text-xs text-zinc-500 font-medium px-6">
+              <p className="text-sm text-zinc-900 font-medium px-6">
                 {t('search_suitability_empty')}
               </p>
             </div>
@@ -624,77 +631,23 @@ export default function DashboardScreen({ onNavigate, onAskAI }: { onNavigate: (
       <motion.div 
         whileHover={{ scale: 1.01 }}
         onClick={() => onNavigate('tracker')}
-        className="bg-emerald-950 rounded-[1.75rem] p-5 text-white cursor-pointer relative overflow-hidden shadow-xl shadow-emerald-900/40 mb-8 group"
+        className="bg-emerald-950 rounded-[1.75rem] p-5 text-white cursor-pointer relative overflow-hidden shadow-xl shadow-emerald-900/40 mb-6 group"
       >
         <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
           <TrendingUp size={80} />
         </div>
         <div className="relative z-10">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-emerald-500">{t('expenses_tracker')}</h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-400">{t('expenses_tracker')}</h3>
           </div>
           
-          <div className="grid grid-cols-2 gap-6 mb-4">
+          <div className="grid grid-cols-1 gap-6 mb-3">
             <div>
-              <p className="text-[9px] font-bold text-emerald-400/60 uppercase tracking-widest mb-1">{t('total_spent')}</p>
-              <p className="text-2xl font-black tracking-tight">
+              <p className="text-[10px] font-bold text-emerald-300/80 uppercase tracking-widest mb-1">{t('total_spent')}</p>
+              <p className="text-3xl font-black tracking-tight">
                 ₹{expenses.reduce((sum, e) => sum + e.amount, 0).toFixed(0)}
               </p>
             </div>
-            <div className="text-right">
-              <p className="text-[9px] font-bold text-emerald-400/60 uppercase tracking-widest mb-1">{t('estimated_yield')}</p>
-              <p className="text-2xl font-black text-emerald-400 tracking-tight">
-                +₹{(expenses.reduce((sum, e) => sum + e.amount, 0) * 1.45).toFixed(0)}
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex justify-between items-end">
-              <span className="text-[8px] font-bold text-emerald-500 uppercase tracking-widest">{t('return_on_investment')}</span>
-              <span className="text-xs font-black text-emerald-400">145%</span>
-            </div>
-            <div className="h-1 bg-white/10 rounded-full overflow-hidden">
-              <motion.div 
-                initial={{ width: 0 }}
-                animate={{ width: '75%' }}
-                className="h-full bg-emerald-400 rounded-full shadow-[0_0_12px_rgba(52,211,153,0.4)]"
-              />
-            </div>
-          </div>
-
-          <div className="mt-4 pt-4 border-t border-white/10 flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                <span className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest">{t('efficiency_score')}</span>
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowEfficiencyInfo(!showEfficiencyInfo);
-                  }}
-                  className="text-zinc-500 hover:text-emerald-400 transition-colors"
-                >
-                  <HelpCircle size={10} />
-                </button>
-              </div>
-              <span className="text-[10px] font-black text-emerald-400">{efficiencyScore}%</span>
-            </div>
-            
-            <AnimatePresence>
-              {showEfficiencyInfo && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="overflow-hidden"
-                >
-                  <p className="text-[8px] font-medium text-zinc-400 leading-relaxed bg-white/5 p-2 rounded-lg border border-white/5">
-                    {t('efficiency_score_desc')}
-                  </p>
-                </motion.div>
-              )}
-            </AnimatePresence>
           </div>
         </div>
       </motion.div>
@@ -731,7 +684,7 @@ export default function DashboardScreen({ onNavigate, onAskAI }: { onNavigate: (
                   </div>
                   <h3 className="text-xl font-bold text-zinc-900">{t('disease_alerts')}</h3>
                 </div>
-                <button onClick={() => setIsAlertsModalOpen(false)} className="p-2 bg-zinc-100 rounded-full text-zinc-500">
+                <button onClick={() => setIsAlertsModalOpen(false)} className="p-2 bg-zinc-100 rounded-full text-zinc-700">
                   <X size={20} />
                 </button>
               </div>
@@ -749,7 +702,7 @@ export default function DashboardScreen({ onNavigate, onAskAI }: { onNavigate: (
                       </div>
                       <div className="text-left">
                         <h4 className="font-bold text-zinc-900">{alert.name}</h4>
-                        <div className="flex items-center gap-2 text-xs text-zinc-400 font-medium mt-0.5">
+                        <div className="flex items-center gap-2 text-xs text-zinc-800 font-medium mt-0.5">
                           <MapPin size={12} />
                           <span>{alert.location}</span>
                         </div>
@@ -759,7 +712,7 @@ export default function DashboardScreen({ onNavigate, onAskAI }: { onNavigate: (
                       <span className={`text-[10px] font-black uppercase tracking-widest ${alert.color}`}>{alert.risk} {t('risk')}</span>
                       <div className="flex items-center gap-1 justify-end mt-1">
                         <div className={`w-1.5 h-1.5 rounded-full ${alert.color} animate-pulse`} />
-                        <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-tighter">{t('active')}</span>
+                        <span className="text-[10px] text-zinc-800 font-bold uppercase tracking-tighter">{t('active')}</span>
                       </div>
                     </div>
                   </button>
@@ -788,7 +741,7 @@ export default function DashboardScreen({ onNavigate, onAskAI }: { onNavigate: (
               <div className={`p-8 ${selectedAlert.bg} flex flex-col items-center text-center relative`}>
                 <button 
                   onClick={() => setSelectedAlert(null)}
-                  className="absolute top-6 right-6 p-2 bg-white/50 backdrop-blur-md rounded-full text-zinc-600"
+                  className="absolute top-6 right-6 p-2 bg-white/50 backdrop-blur-md rounded-full text-zinc-800"
                 >
                   <X size={20} />
                 </button>
@@ -796,7 +749,7 @@ export default function DashboardScreen({ onNavigate, onAskAI }: { onNavigate: (
                   <AlertCircle size={40} />
                 </div>
                 <h3 className="text-2xl font-black text-zinc-900 mb-1">{selectedAlert.name}</h3>
-                <div className="flex items-center gap-2 text-sm font-bold text-zinc-500 uppercase tracking-widest">
+                <div className="flex items-center gap-2 text-sm font-bold text-zinc-900 uppercase tracking-widest">
                   <MapPin size={14} />
                   <span>{selectedAlert.location}</span>
                 </div>
@@ -804,23 +757,23 @@ export default function DashboardScreen({ onNavigate, onAskAI }: { onNavigate: (
 
               <div className="p-8 space-y-6 max-h-[60vh] overflow-y-auto">
                 <div>
-                  <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">{t('details')}</h4>
-                  <p className="text-sm text-zinc-600 leading-relaxed">{selectedAlert.description}</p>
+                  <h4 className="text-[10px] font-black text-zinc-800 uppercase tracking-widest mb-2">{t('details')}</h4>
+                  <p className="text-sm text-zinc-800 leading-relaxed">{selectedAlert.description}</p>
                 </div>
 
                 <div className="p-5 bg-orange-50 rounded-3xl border border-orange-100">
-                  <h4 className="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-2">{t('why_happening')}</h4>
-                  <p className="text-sm text-orange-900 leading-relaxed font-medium">{selectedAlert.why}</p>
+                  <h4 className="text-[10px] font-black text-orange-800 uppercase tracking-widest mb-2">{t('why_happening')}</h4>
+                  <p className="text-sm text-orange-950 leading-relaxed font-medium">{selectedAlert.why}</p>
                 </div>
 
                 <div>
-                  <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">{t('prevention')}</h4>
-                  <p className="text-sm text-zinc-600 leading-relaxed">{selectedAlert.prevention}</p>
+                  <h4 className="text-[10px] font-black text-zinc-800 uppercase tracking-widest mb-2">{t('prevention')}</h4>
+                  <p className="text-sm text-zinc-800 leading-relaxed">{selectedAlert.prevention}</p>
                 </div>
 
                 <div className="p-5 bg-emerald-50 rounded-3xl border border-emerald-100">
-                  <h4 className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-2">{t('organic_remedy')}</h4>
-                  <p className="text-sm text-emerald-900 leading-relaxed font-bold italic">"{selectedAlert.remedy}"</p>
+                  <h4 className="text-[10px] font-black text-emerald-800 uppercase tracking-widest mb-2">{t('organic_remedy')}</h4>
+                  <p className="text-sm text-emerald-950 leading-relaxed font-bold italic">"{selectedAlert.remedy}"</p>
                 </div>
               </div>
 
@@ -853,7 +806,7 @@ export default function DashboardScreen({ onNavigate, onAskAI }: { onNavigate: (
               className="w-full max-w-md bg-white rounded-[2.5rem] p-6 shadow-2xl"
             >
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-bold text-zinc-900">Search Garden</h3>
+                <h3 className="text-xl font-bold text-zinc-900">{t('search_garden')}</h3>
                 <button 
                   onClick={() => setIsSearchModalOpen(false)}
                   className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center text-zinc-500"
@@ -869,27 +822,27 @@ export default function DashboardScreen({ onNavigate, onAskAI }: { onNavigate: (
                   type="text"
                   value={globalSearchQuery}
                   onChange={(e) => setGlobalSearchQuery(e.target.value)}
-                  placeholder="Search plants, products, or ask AI..."
+                  placeholder={t('search_placeholder')}
                   className="w-full bg-zinc-50 border-2 border-zinc-100 rounded-3xl pl-12 pr-4 py-4 text-sm font-medium focus:outline-none focus:border-emerald-500 transition-all"
                 />
               </form>
 
               <div className="space-y-6">
                 <div>
-                  <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Quick Links</h4>
+                  <h4 className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-4">{t('quick_links')}</h4>
                   <div className="grid grid-cols-1 gap-3">
                     <button 
                       onClick={() => { onNavigate('disease'); setIsSearchModalOpen(false); }}
                       className="p-4 bg-blue-50 rounded-3xl flex flex-col gap-2 items-start text-left border border-blue-100 w-full"
                     >
                       <Camera size={20} className="text-blue-600" />
-                      <span className="text-xs font-bold text-blue-900">Disease ID</span>
+                      <span className="text-xs font-bold text-blue-900">{t('disease_id')}</span>
                     </button>
                   </div>
                 </div>
 
                 <div>
-                  <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Popular Plants</h4>
+                  <h4 className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-4">{t('popular_plants')}</h4>
                   <div className="flex flex-wrap gap-2">
                     {['Tomato', 'Mango', 'Coconut', 'Chilli', 'Aloe Vera'].map(p => (
                       <button 
@@ -899,9 +852,9 @@ export default function DashboardScreen({ onNavigate, onAskAI }: { onNavigate: (
                           handleAddPlantSubmit({ preventDefault: () => {} } as any);
                           setIsSearchModalOpen(false);
                         }}
-                        className="px-4 py-2 bg-zinc-100 rounded-2xl text-xs font-bold text-zinc-600 hover:bg-zinc-200 transition-colors"
+                        className="px-4 py-2 bg-zinc-100 rounded-2xl text-xs font-bold text-zinc-800 hover:bg-zinc-200 transition-colors"
                       >
-                        {p}
+                        {t(p.toLowerCase().replace(/\s+/g, '_'))}
                       </button>
                     ))}
                   </div>

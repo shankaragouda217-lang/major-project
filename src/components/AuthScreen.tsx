@@ -29,7 +29,7 @@ export default function AuthScreen({ onBack }: { onBack: () => void }) {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
     } catch (err: any) {
-      setError('Google sign-in failed. Please try again.');
+      setError(t('auth_google_failed'));
     } finally {
       setLoading(false);
     }
@@ -43,7 +43,7 @@ export default function AuthScreen({ onBack }: { onBack: () => void }) {
     try {
       if (isReset) {
         await sendPasswordResetEmail(auth, email);
-        setSuccess('Password reset link sent! Please check your email (and Spam folder).');
+        setSuccess(t('auth_reset_sent'));
       } else if (isLogin) {
         await signInWithEmailAndPassword(auth, email, password);
       } else {
@@ -51,10 +51,10 @@ export default function AuthScreen({ onBack }: { onBack: () => void }) {
       }
     } catch (err: any) {
       let message = err.message;
-      if (err.code === 'auth/invalid-credential') message = 'Incorrect email or password. If you haven\'t signed up yet, please switch to the Sign Up tab.';
-      if (err.code === 'auth/user-not-found') message = 'No account found with this email.';
-      if (err.code === 'auth/wrong-password') message = 'Incorrect password.';
-      if (err.code === 'auth/email-already-in-use') message = 'This email is already registered.';
+      if (err.code === 'auth/invalid-credential') message = t('auth_invalid_credential');
+      if (err.code === 'auth/user-not-found') message = t('auth_user_not_found');
+      if (err.code === 'auth/wrong-password') message = t('auth_wrong_password');
+      if (err.code === 'auth/email-already-in-use') message = t('auth_email_in_use');
       setError(message);
     } finally {
       setLoading(false);
@@ -63,7 +63,7 @@ export default function AuthScreen({ onBack }: { onBack: () => void }) {
 
   const handleResendReset = async () => {
     if (!email) {
-      setError('Please enter your email first.');
+      setError(t('auth_enter_email'));
       return;
     }
     setError('');
@@ -71,7 +71,7 @@ export default function AuthScreen({ onBack }: { onBack: () => void }) {
     setLoading(true);
     try {
       await sendPasswordResetEmail(auth, email);
-      setSuccess('Reset link resent successfully!');
+      setSuccess(t('auth_reset_resent'));
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -88,6 +88,17 @@ export default function AuthScreen({ onBack }: { onBack: () => void }) {
         <ArrowLeft size={20} /> {t('auth_back')}
       </button>
 
+      <div className="flex justify-center mb-6">
+        <div className="w-24 h-24 bg-white rounded-3xl flex items-center justify-center overflow-hidden border border-emerald-100 shadow-xl">
+          <img
+            src="https://iili.io/qD8Qbig.png"
+            alt="Logo"
+            className="w-20 h-20 object-contain"
+            referrerPolicy="no-referrer"
+          />
+        </div>
+      </div>
+
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -96,7 +107,7 @@ export default function AuthScreen({ onBack }: { onBack: () => void }) {
         <h2 className="text-3xl font-bold mb-2 text-emerald-800">
           {isReset ? t('auth_reset_password') : (isLogin ? t('auth_welcome_back') : t('auth_create_account'))}
         </h2>
-        <p className="text-zinc-500 mb-8">
+        <p className="text-zinc-700 mb-8">
           {isReset 
             ? t('auth_reset_desc') 
             : (isLogin ? t('auth_signin_desc') : t('auth_signup_desc'))}
@@ -105,7 +116,7 @@ export default function AuthScreen({ onBack }: { onBack: () => void }) {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="relative">
-          <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={20} />
+          <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600" size={20} />
           <input
             type="email"
             placeholder={t('auth_email')}
@@ -118,7 +129,7 @@ export default function AuthScreen({ onBack }: { onBack: () => void }) {
 
         {!isReset && (
           <div className="relative">
-            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={20} />
+            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600" size={20} />
             <input
               type={showPassword ? "text" : "password"}
               placeholder={t('auth_password')}
@@ -132,7 +143,7 @@ export default function AuthScreen({ onBack }: { onBack: () => void }) {
               onClick={() => setShowPassword(!showPassword)}
               className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-emerald-600 transition-colors"
             >
-              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              {showPassword ? <EyeOff size={20} className="text-zinc-600" /> : <Eye size={20} className="text-zinc-600" />}
             </button>
           </div>
         )}
@@ -193,8 +204,7 @@ export default function AuthScreen({ onBack }: { onBack: () => void }) {
           <div className="mt-4 p-4 bg-amber-50 border border-amber-100 rounded-2xl flex items-start gap-3 text-xs text-amber-800">
             <AlertCircle size={16} className="shrink-0 mt-0.5" />
             <p>
-              If you don't see the email within 2 minutes, check your <strong>Spam or Junk</strong> folder. 
-              The sender will be from your Firebase project domain.
+              {t('auth_spam_note')}
             </p>
           </div>
         )}
@@ -204,9 +214,9 @@ export default function AuthScreen({ onBack }: { onBack: () => void }) {
             type="button"
             onClick={handleResendReset}
             disabled={loading}
-            className="w-full text-zinc-500 text-sm font-medium py-2 hover:text-emerald-600 transition-colors"
+            className="w-full text-zinc-700 text-sm font-medium py-2 hover:text-emerald-600 transition-colors"
           >
-            Didn't receive the link? Resend
+            {t('auth_resend')}
           </button>
         )}
 
@@ -217,7 +227,7 @@ export default function AuthScreen({ onBack }: { onBack: () => void }) {
                 <div className="w-full border-t border-zinc-200"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-emerald-50 text-zinc-400">{t('auth_or_continue')}</span>
+                <span className="px-4 bg-emerald-50 text-zinc-600">{t('auth_or_continue')}</span>
               </div>
             </div>
 

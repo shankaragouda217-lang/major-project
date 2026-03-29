@@ -19,55 +19,58 @@ const SuggestionCard = ({ title, advice, icon: Icon, color }: any) => (
 );
 
 export default function CareSuggestionsScreen() {
-  const { sensors } = useApp();
+  const { sensors, t } = useApp();
 
   const getWateringAdvice = () => {
-    if (sensors.moisture < 30) return `Soil moisture is low (${Math.round(sensors.moisture)}%). Water your plants immediately.`;
-    if (sensors.moisture < 50) return `Soil moisture is moderate (${Math.round(sensors.moisture)}%). Check again tomorrow before watering.`;
-    return `Soil moisture is good (${Math.round(sensors.moisture)}%). No need to water today.`;
+    const value = Math.round(sensors.moisture);
+    if (sensors.moisture < 30) return t('moisture_low', { value });
+    if (sensors.moisture < 50) return t('moisture_moderate', { value });
+    return t('moisture_good', { value });
   };
 
   const getSunlightAdvice = () => {
-    if (sensors.light < 30) return `Light levels are low (${Math.round(sensors.light)}%). Consider moving plants closer to a window.`;
-    return `Light levels are optimal (${Math.round(sensors.light)}%). Ensure plants get 6 hours of this light.`;
+    const value = Math.round(sensors.light);
+    if (sensors.light < 30) return t('light_low', { value });
+    return t('light_optimal', { value });
   };
 
   const getTempAdvice = () => {
-    if (sensors.temp > 30) return `It's quite warm (${Math.round(sensors.temp)}°C). Ensure good ventilation and check moisture more often.`;
-    if (sensors.temp < 18) return `It's getting cool (${Math.round(sensors.temp)}°C). Protect sensitive plants from cold drafts.`;
-    return `Temperature is perfect (${Math.round(sensors.temp)}°C) for most urban plants.`;
+    const value = Math.round(sensors.temp);
+    if (sensors.temp > 30) return t('temp_warm', { value });
+    if (sensors.temp < 18) return t('temp_cool', { value });
+    return t('temp_perfect', { value });
   };
 
   return (
     <div className="p-6">
-      <h2 className="text-2xl font-bold text-emerald-900 mb-2">Care Suggestions</h2>
-      <p className="text-zinc-500 mb-8">Smart advice based on your garden data.</p>
+      <h2 className="text-2xl font-bold text-emerald-900 mb-2">{t('care_suggestions_title')}</h2>
+      <p className="text-zinc-700 mb-8">{t('care_suggestions_desc')}</p>
 
       <SuggestionCard
-        title="Watering Advice"
+        title={t('watering_advice_title')}
         advice={getWateringAdvice()}
         icon={Droplets}
-        color="bg-blue-100 text-blue-700 border-blue-200"
+        color="bg-blue-100 text-blue-900 border-blue-200"
       />
 
       <SuggestionCard
-        title="Sunlight Advice"
+        title={t('sunlight_advice_title')}
         advice={getSunlightAdvice()}
         icon={Sun}
-        color="bg-amber-100 text-amber-700 border-amber-200"
+        color="bg-amber-100 text-amber-900 border-amber-200"
       />
 
       <SuggestionCard
-        title="Temperature Advice"
+        title={t('temp_advice_title')}
         advice={getTempAdvice()}
         icon={Thermometer}
-        color="bg-emerald-100 text-emerald-700 border-emerald-200"
+        color="bg-emerald-100 text-emerald-900 border-emerald-200"
       />
 
       <div className="mt-8 p-6 bg-zinc-100 rounded-3xl flex gap-4">
-        <Info className="text-zinc-400 shrink-0" />
-        <p className="text-sm text-zinc-600 italic">
-          Tip: Urban environments can get dusty. Wipe your plant leaves with a damp cloth once a week to help them breathe better.
+        <Info className="text-zinc-600 shrink-0" />
+        <p className="text-sm text-zinc-800 italic">
+          {t('dusty_leaves_tip')}
         </p>
       </div>
     </div>

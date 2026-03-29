@@ -77,26 +77,9 @@ export default function TrackerScreen({ onBack }: { onBack: () => void }) {
           <TrendingUp size={80} />
         </div>
         <div className="relative z-10">
-          <div className="flex items-center gap-2 mb-6">
-            <div className="w-6 h-6 bg-emerald-500/20 rounded-lg flex items-center justify-center">
-              <Calculator size={12} className="text-emerald-400" />
-            </div>
-            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-500">Performance Index</span>
-          </div>
-          <div className="grid grid-cols-2 gap-8 mb-6">
-            <div>
-              <p className="text-emerald-500/60 text-[9px] font-black uppercase tracking-widest mb-1">Investment</p>
-              <h2 className="text-2xl font-black">₹{stats.total.toFixed(2)}</h2>
-            </div>
-            <div>
-              <p className="text-emerald-500/60 text-[9px] font-black uppercase tracking-widest mb-1">Projected ROI</p>
-              <h2 className="text-2xl font-black text-emerald-400">+{stats.roi.toFixed(0)}%</h2>
-            </div>
-          </div>
-          <div className="pt-4 border-t border-white/10">
-            <p className="text-[10px] text-emerald-100/60 leading-relaxed font-medium italic">
-              "Your garden is currently yielding <span className="text-emerald-400 font-bold">₹{stats.estimatedYieldValue.toFixed(2)}</span> in value."
-            </p>
+          <div className="mb-2">
+            <p className="text-emerald-500/60 text-[9px] font-black uppercase tracking-widest mb-1">Investment</p>
+            <h2 className="text-3xl font-black">₹{stats.total.toFixed(2)}</h2>
           </div>
         </div>
       </div>

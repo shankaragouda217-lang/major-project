@@ -14,7 +14,7 @@ export default function Navigation({ current, onNavigate }: { current: string, o
   ];
 
   return (
-    <nav className="bg-white/90 backdrop-blur-2xl border border-zinc-200/50 rounded-3xl px-1 py-1.5 flex justify-between items-center shadow-[0_20px_50px_rgba(0,0,0,0.15)]">
+    <nav className="bg-white border-2 border-zinc-900 rounded-full px-2 py-2 flex justify-between items-center shadow-[0_20px_50px_rgba(0,0,0,0.2)]">
       {items.map((item) => {
         const Icon = item.icon;
         const isActive = current === item.id;
@@ -22,17 +22,17 @@ export default function Navigation({ current, onNavigate }: { current: string, o
           <button
             key={item.id}
             onClick={() => onNavigate(item.id)}
-            className={`flex-1 flex flex-col items-center px-1 py-1 transition-all relative ${isActive ? 'text-emerald-600' : 'text-zinc-400 hover:text-zinc-600'}`}
+            className={`flex-1 flex flex-col items-center px-1 py-1.5 transition-all relative ${isActive ? 'text-emerald-700' : 'text-zinc-600 hover:text-zinc-900'}`}
           >
             {isActive && (
               <motion.div 
                 layoutId="nav-active"
-                className="absolute inset-0 bg-emerald-50 rounded-2xl -z-10"
+                className="absolute inset-0 bg-emerald-100 rounded-2xl -z-10"
                 transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
               />
             )}
-            <Icon size={18} strokeWidth={isActive ? 2.5 : 2} />
-            <span className={`text-[7px] font-black mt-1 uppercase tracking-wider text-center ${isActive ? 'opacity-100' : 'opacity-60'}`}>{item.label}</span>
+            <Icon size={22} strokeWidth={isActive ? 3 : 2} />
+            <span className={`text-[9px] font-black mt-1 uppercase tracking-wider text-center ${isActive ? 'opacity-100' : 'opacity-100'}`}>{item.label}</span>
           </button>
         );
       })}

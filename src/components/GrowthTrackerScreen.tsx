@@ -157,8 +157,12 @@ export default function GrowthTrackerScreen() {
       // Save analysis to history
       await addToHistory({
         type: 'growth_log',
-        title: `AI Growth Analysis: ${result.plantName}`,
-        details: `Stage: ${result.growthStage} | Health: ${result.healthStatus} | Harvest: ${result.estimatedHarvestDays} days`,
+        title: `${t('ai_growth_analysis_title')}: ${result.plantName}`,
+        details: t('ai_growth_analysis_details', {
+          stage: result.growthStage,
+          health: result.healthStatus,
+          harvest: result.estimatedHarvestDays
+        }),
         image: imageData
       });
     } catch (err: any) {
@@ -187,8 +191,12 @@ export default function GrowthTrackerScreen() {
       // Save search to history
       await addToHistory({
         type: 'growth_search',
-        title: `Plant Search: ${plantName}`,
-        details: `Age: ${d} days | Harvest Cycle: ${result.harvestDays} days | Fertilizer: ${result.fertilizerAdvice.substring(0, 50)}...`
+        title: `${t('plant_search_title')}: ${plantName}`,
+        details: t('plant_search_details', {
+          days: d,
+          harvestDays: result.harvestDays,
+          fertilizer: result.fertilizerAdvice.substring(0, 50)
+        })
       });
     } catch (error) {
       console.error("Failed to get suggestions:", error);
@@ -204,8 +212,13 @@ export default function GrowthTrackerScreen() {
       const d = Number(daysPlanted) || 0;
       await addToHistory({
         type: 'growth_log',
-        title: `Growth Log: ${plantName}`,
-        details: `Age: ${d} days | Progress: ${Math.round(progress)}% | Days Left: ${daysLeft} | Fertilizer: ${aiAdvice.fertilizer?.substring(0, 50)}`,
+        title: `${t('growth_log_title')}: ${plantName}`,
+        details: t('growth_log_details', {
+          days: d,
+          progress: Math.round(progress),
+          daysLeft: daysLeft,
+          fertilizer: aiAdvice.fertilizer?.substring(0, 50) || 'None'
+        }),
         image: plantImage || undefined
       });
       setSaveSuccess(true);
@@ -243,18 +256,18 @@ export default function GrowthTrackerScreen() {
     <div className="p-3 pb-16 max-w-4xl mx-auto">
       <header className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-100/50 pb-4">
         <div className="flex-shrink-0">
-          <h1 className="text-xl sm:text-2xl font-black text-emerald-950 tracking-tighter uppercase leading-none mb-1 whitespace-nowrap">
+          <h1 className="text-lg sm:text-xl font-black text-emerald-950 tracking-tighter uppercase leading-none mb-1 whitespace-nowrap">
             {t('track_growth')}
           </h1>
           <div className="flex items-center gap-1.5">
             <div className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse" />
-            <p className="text-zinc-500 font-bold uppercase tracking-widest text-[7px]">{t('ai_cultivation_intelligence')}</p>
+            <p className="text-zinc-950 font-bold uppercase tracking-widest text-[7px]">{t('ai_cultivation_intelligence')}</p>
           </div>
         </div>
         <div className="flex gap-1.5">
           <button 
             onClick={() => document.getElementById('growth-history')?.scrollIntoView({ behavior: 'smooth' })}
-            className="px-2.5 py-1.5 rounded-lg bg-zinc-100 text-zinc-600 hover:bg-zinc-200 transition-all flex items-center gap-1.5 border border-zinc-200"
+            className="px-2.5 py-1.5 rounded-lg bg-zinc-100 text-zinc-800 hover:bg-zinc-200 transition-all flex items-center gap-1.5 border border-zinc-200"
           >
             <HistoryIcon size={12} />
             <span className="text-[8px] font-black uppercase tracking-widest">{t('history')}</span>
@@ -271,7 +284,7 @@ export default function GrowthTrackerScreen() {
               <div className="w-7 h-7 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-600">
                 <Leaf size={16} />
               </div>
-              <h3 className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em]">{t('plant_config')}</h3>
+              <h3 className="text-[9px] font-black text-zinc-950 uppercase tracking-[0.2em]">{t('plant_config')}</h3>
             </div>
 
             <div className="space-y-3">
@@ -281,13 +294,13 @@ export default function GrowthTrackerScreen() {
                   value={plantName}
                   onChange={(e) => setPlantName(e.target.value)}
                   placeholder={t('what_growing')}
-                  className="w-full pl-4 pr-12 py-2.5 bg-zinc-50 rounded-xl border-2 border-transparent focus:border-emerald-500 focus:bg-white outline-none font-black text-base text-emerald-950 transition-all placeholder:text-zinc-300"
+                  className="w-full pl-4 pr-12 py-2.5 bg-zinc-50 rounded-xl border-2 border-transparent focus:border-emerald-500 focus:bg-white outline-none font-black text-base text-emerald-950 transition-all placeholder:text-zinc-900"
                 />
                 <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex gap-1">
                   {plantName && (
                     <button 
                       onClick={() => setPlantName('')}
-                      className="p-1.5 text-zinc-300 hover:text-zinc-500 transition-all"
+                      className="p-1.5 text-zinc-500 hover:text-zinc-700 transition-all"
                     >
                       <X size={14} />
                     </button>
@@ -310,7 +323,7 @@ export default function GrowthTrackerScreen() {
                     className={`px-2 py-0.5 rounded-md text-[7px] font-black uppercase tracking-widest transition-all ${
                       plantName === p 
                         ? 'bg-emerald-950 text-white shadow-sm' 
-                        : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200'
+                        : 'bg-zinc-100 text-zinc-950 hover:bg-zinc-200'
                     }`}
                   >
                     {p}
@@ -322,7 +335,7 @@ export default function GrowthTrackerScreen() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Timer size={14} className="text-emerald-500" />
-                    <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest">{t('growth_progress')}</span>
+                    <span className="text-[8px] font-black text-zinc-950 uppercase tracking-widest">{t('growth_progress')}</span>
                   </div>
                   <div className="flex items-center gap-1 bg-emerald-100 px-2 py-0.5 rounded-full">
                     <span className="text-[8px] font-black text-emerald-700 uppercase tracking-widest">{daysLeft} {t('days_left')}</span>
@@ -331,29 +344,29 @@ export default function GrowthTrackerScreen() {
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="text-[7px] font-black text-zinc-400 uppercase tracking-widest block">{t('days_planted')}</label>
+                    <label className="text-[7px] font-black text-zinc-950 uppercase tracking-widest block">{t('days_planted')}</label>
                     <div className="flex items-baseline gap-1">
                       <input 
                         type="number" 
                         value={daysPlanted}
                         onChange={(e) => setDaysPlanted(e.target.value)}
                         placeholder=""
-                        className="w-20 bg-white px-2 py-1 rounded-lg border border-zinc-200 font-black text-xl text-emerald-950 outline-none focus:border-emerald-500 transition-all placeholder:text-zinc-200"
+                        className="w-20 bg-white px-2 py-1 rounded-lg border border-zinc-200 font-black text-xl text-emerald-950 outline-none focus:border-emerald-500 transition-all placeholder:text-zinc-800"
                       />
-                      <span className="text-[8px] font-bold text-zinc-400 uppercase">{t('days')}</span>
+                      <span className="text-[8px] font-bold text-zinc-950 uppercase">{t('days')}</span>
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[7px] font-black text-zinc-400 uppercase tracking-widest block">{t('total_cycle')}</label>
+                    <label className="text-[7px] font-black text-zinc-950 uppercase tracking-widest block">{t('total_cycle')}</label>
                     <div className="flex items-baseline gap-1">
                       <input 
                         type="number" 
                         value={harvestDays}
                         onChange={(e) => setHarvestDays(e.target.value)}
                         placeholder=""
-                        className="w-20 bg-white px-2 py-1 rounded-lg border border-zinc-200 font-black text-xl text-emerald-950 outline-none focus:border-blue-500 transition-all placeholder:text-zinc-200"
+                        className="w-20 bg-white px-2 py-1 rounded-lg border border-zinc-200 font-black text-xl text-emerald-950 outline-none focus:border-blue-500 transition-all placeholder:text-zinc-800"
                       />
-                      <span className="text-[8px] font-bold text-zinc-400 uppercase">{t('days')}</span>
+                      <span className="text-[8px] font-bold text-zinc-950 uppercase">{t('days')}</span>
                     </div>
                   </div>
                 </div>
@@ -367,7 +380,7 @@ export default function GrowthTrackerScreen() {
               <div className="flex items-center justify-between mb-3">
                 <div>
                   <h4 className="text-[7px] font-black uppercase tracking-[0.2em] text-emerald-500 mb-0.5">{t('growth_status')}</h4>
-                  <p className="text-lg font-black text-white">{Math.round(progress)}% {t('complete')}</p>
+                  <p className="text-base font-black text-white">{Math.round(progress)}% {t('complete')}</p>
                 </div>
                 <div className="w-8 h-8 bg-emerald-500/20 rounded-lg flex items-center justify-center text-emerald-400 border border-emerald-500/30">
                   <Leaf size={16} />
@@ -409,13 +422,13 @@ export default function GrowthTrackerScreen() {
                 <div className="w-7 h-7 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-600">
                   <Camera size={16} />
                 </div>
-                <h3 className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em]">{t('visual_log')}</h3>
+                <h3 className="text-[9px] font-black text-zinc-950 uppercase tracking-[0.2em]">{t('visual_log')}</h3>
               </div>
               <div className="flex gap-1">
-                <button onClick={startCamera} className="p-1.5 bg-zinc-100 rounded-md text-zinc-600 hover:bg-emerald-100 hover:text-emerald-600 transition-all">
+                <button onClick={startCamera} className="p-1.5 bg-zinc-100 rounded-md text-zinc-800 hover:bg-emerald-100 hover:text-emerald-600 transition-all">
                   <Camera size={14} />
                 </button>
-                <button onClick={() => fileInputRef.current?.click()} className="p-1.5 bg-zinc-100 rounded-md text-zinc-600 hover:bg-emerald-100 hover:text-emerald-600 transition-all">
+                <button onClick={() => fileInputRef.current?.click()} className="p-1.5 bg-zinc-100 rounded-md text-zinc-800 hover:bg-emerald-100 hover:text-emerald-600 transition-all">
                   <Upload size={14} />
                 </button>
               </div>
@@ -445,10 +458,10 @@ export default function GrowthTrackerScreen() {
                 </div>
               ) : (
                 <div className="w-full h-full flex flex-col items-center justify-center p-4 text-center">
-                  <div className="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center text-zinc-300 mb-2">
+                  <div className="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center text-zinc-500 mb-2">
                     <Camera size={24} />
                   </div>
-                  <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">{t('no_visual_data')}</p>
+                  <p className="text-[9px] font-black text-zinc-950 uppercase tracking-widest">{t('no_visual_data')}</p>
                 </div>
               )}
               
@@ -472,11 +485,11 @@ export default function GrowthTrackerScreen() {
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <p className="text-[7px] font-bold text-emerald-600/60 uppercase mb-0.5">{t('health')}</p>
+                    <p className="text-[7px] font-bold text-emerald-800/80 uppercase mb-0.5">{t('health')}</p>
                     <p className="text-[10px] font-black text-emerald-900">{analysisResult.healthStatus}</p>
                   </div>
                   <div>
-                    <p className="text-[7px] font-bold text-emerald-600/60 uppercase mb-0.5">{t('stage')}</p>
+                    <p className="text-[7px] font-bold text-emerald-800/80 uppercase mb-0.5">{t('stage')}</p>
                     <p className="text-[10px] font-black text-emerald-900">{analysisResult.growthStage}</p>
                   </div>
                 </div>
@@ -492,7 +505,7 @@ export default function GrowthTrackerScreen() {
           <div className="h-[1px] flex-1 bg-zinc-100" />
           <div className="flex items-center gap-2 px-3">
             <Sparkles className="text-emerald-500" size={20} />
-            <h2 className="text-lg font-black text-emerald-950 tracking-tight uppercase">{t('cultivation_intelligence')}</h2>
+            <h2 className="text-base font-black text-emerald-950 tracking-tight uppercase">{t('cultivation_intelligence')}</h2>
           </div>
           <div className="h-[1px] flex-1 bg-zinc-100" />
         </div>
@@ -530,8 +543,8 @@ export default function GrowthTrackerScreen() {
               <div className="w-14 h-14 bg-white rounded-2xl shadow-sm flex items-center justify-center text-emerald-500 mx-auto mb-4">
                 <Info size={28} />
               </div>
-              <h3 className="text-base font-black text-emerald-950 mb-2">{t('deep_insights_req')}</h3>
-              <p className="text-[11px] text-zinc-500 font-medium mb-6 leading-relaxed">
+              <h3 className="text-sm font-black text-emerald-950 mb-2">{t('deep_insights_req')}</h3>
+              <p className="text-[11px] text-zinc-950 font-medium mb-6 leading-relaxed">
                 {t('deep_insights_desc')}
               </p>
               <button 
@@ -551,12 +564,12 @@ export default function GrowthTrackerScreen() {
       <section id="growth-history" className="space-y-6">
         <div className="flex items-center justify-between border-b border-zinc-100 pb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-zinc-100 rounded-xl flex items-center justify-center text-zinc-400">
+            <div className="w-10 h-10 bg-zinc-100 rounded-xl flex items-center justify-center text-zinc-600">
               <HistoryIcon size={20} />
             </div>
             <div>
-              <h3 className="text-lg font-black text-emerald-950 uppercase tracking-tight">{t('growth_archive')}</h3>
-              <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">{t('historical_data')}</p>
+              <h3 className="text-base font-black text-emerald-950 uppercase tracking-tight">{t('growth_archive')}</h3>
+              <p className="text-[9px] font-black text-zinc-950 uppercase tracking-widest">{t('historical_data')}</p>
             </div>
           </div>
           <div className="flex gap-2 items-center">
@@ -574,7 +587,7 @@ export default function GrowthTrackerScreen() {
                     setIsSelectionMode(false);
                     setSelectedHistoryItems([]);
                   }}
-                  className="px-3 py-2 bg-zinc-100 text-zinc-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all border border-zinc-200"
+                  className="px-3 py-2 bg-zinc-100 text-zinc-800 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all border border-zinc-200"
                 >
                   {t('cancel')}
                 </button>
@@ -600,7 +613,7 @@ export default function GrowthTrackerScreen() {
                     </button>
                     <button 
                       onClick={() => setShowPurgeConfirm(false)}
-                      className="px-3 py-2 bg-zinc-100 text-zinc-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all border border-zinc-200"
+                      className="px-3 py-2 bg-zinc-100 text-zinc-800 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all border border-zinc-200"
                     >
                       <X size={14} />
                     </button>
@@ -619,7 +632,7 @@ export default function GrowthTrackerScreen() {
         </div>
 
         <div className="relative">
-          <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
+          <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-950" size={18} />
           <input 
             type="text"
             value={historySearch}
@@ -663,7 +676,7 @@ export default function GrowthTrackerScreen() {
                     <h4 className="font-black text-emerald-950 truncate text-sm">{item.title}</h4>
                   </div>
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest">
+                    <span className="text-[8px] font-black text-zinc-950 uppercase tracking-widest">
                       {new Date(item.timestamp).toLocaleDateString()}
                     </span>
                     <div className="w-0.5 h-0.5 bg-zinc-200 rounded-full" />
@@ -671,7 +684,7 @@ export default function GrowthTrackerScreen() {
                       {item.type === 'growth_search' ? 'Search' : 'Log'}
                     </span>
                   </div>
-                  <p className="text-[10px] text-zinc-500 font-medium line-clamp-1 leading-relaxed">{item.details}</p>
+                  <p className="text-[10px] text-zinc-950 font-medium line-clamp-1 leading-relaxed">{item.details}</p>
                 </div>
 
                 {!isSelectionMode && (
@@ -680,7 +693,7 @@ export default function GrowthTrackerScreen() {
                       e.stopPropagation();
                       deleteHistoryItem(item.id);
                     }}
-                    className="p-2 text-zinc-300 hover:text-rose-500 transition-colors md:opacity-0 md:group-hover:opacity-100"
+                    className="p-2 text-zinc-500 hover:text-rose-500 transition-colors md:opacity-0 md:group-hover:opacity-100"
                   >
                     <Trash2 size={16} />
                   </button>
@@ -690,7 +703,7 @@ export default function GrowthTrackerScreen() {
           ) : (
             <div className="col-span-full text-center py-16 bg-zinc-50 rounded-[2rem] border border-dashed border-zinc-200">
               <HistoryIcon className="mx-auto text-zinc-200 mb-3" size={32} />
-              <p className="text-zinc-400 font-black uppercase tracking-[0.2em] text-xs">{t('archive_empty')}</p>
+              <p className="text-zinc-800 font-black uppercase tracking-[0.2em] text-xs">{t('archive_empty')}</p>
             </div>
           )}
         </div>
@@ -725,8 +738,8 @@ function AdviceCard({ title, content, icon, color }: { title: string; content: s
       <div className={`w-8 h-8 rounded-xl flex items-center justify-center mb-3 border shadow-sm transition-all group-hover:scale-110 ${colorClasses[color]}`}>
         {isError ? <AlertCircle size={16} /> : icon}
       </div>
-      <h4 className={`text-[8px] font-black ${isError ? 'text-rose-400' : 'text-zinc-400'} uppercase tracking-widest mb-1.5`}>{title}</h4>
-      <p className={`text-[11px] ${isError ? 'text-rose-700' : 'text-zinc-600'} font-bold leading-relaxed flex-1`}>{displayContent}</p>
+      <h4 className={`text-[8px] font-black ${isError ? 'text-rose-400' : 'text-zinc-950'} uppercase tracking-widest mb-1.5`}>{title}</h4>
+      <p className={`text-[11px] ${isError ? 'text-rose-700' : 'text-zinc-950'} font-bold leading-relaxed flex-1`}>{displayContent}</p>
     </motion.div>
   );
 }

@@ -8,7 +8,7 @@ import { getAIErrorKey } from '../services/geminiService';
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
 export default function BalconyAnalysisScreen() {
-  const { addToHistory } = useApp();
+  const { addToHistory, t, currentLanguage } = useApp();
   const [image, setImage] = useState<string | null>(null);
   const [plantInput, setPlantInput] = useState('');
   const [balconyDetails, setBalconyDetails] = useState('');
@@ -46,7 +46,7 @@ export default function BalconyAnalysisScreen() {
       setError(null);
     } catch (err) {
       console.error("Error accessing camera:", err);
-      setError("Could not access camera. Please check permissions or use the Gallery option.");
+      setError(t('camera_error'));
     }
   };
 
@@ -111,7 +111,9 @@ export default function BalconyAnalysisScreen() {
             4. For feasible plants, provide precise placement and sunlight levels. 
                CRITICAL: Be extremely specific about spatial placement relative to common furniture or features (e.g., "Place the Tomato pot 2 feet in front of the sofa on the right side", "Position the Chilli plant directly on the windowsill to the left of the door").
             5. Explain WHY each spot is optimal (e.g., "This spot gets 6 hours of direct morning sun").
-            6. Provide a summary of the balcony's potential.`
+            6. Provide a summary of the balcony's potential.
+            
+            IMPORTANT: Your entire response MUST be in ${currentLanguage === 'kn' ? 'Kannada' : currentLanguage === 'hi' ? 'Hindi' : currentLanguage === 'ta' ? 'Tamil' : currentLanguage === 'te' ? 'Telugu' : 'English'}.`
           }
         ],
         config: {
@@ -161,7 +163,7 @@ export default function BalconyAnalysisScreen() {
     } catch (error: any) {
       console.error("Balcony Analysis Error:", error);
       const errorKey = getAIErrorKey(error);
-      setError(errorKey === 'ai_error_api_key' ? 'API key is missing or invalid. Please check your settings.' : 'Failed to analyze balcony. Please try again.');
+      setError(errorKey === 'ai_error_api_key' ? t('ai_error_api_key') : t('ai_error_generic'));
     } finally {
       setIsAnalyzing(false);
     }
@@ -170,14 +172,14 @@ export default function BalconyAnalysisScreen() {
   return (
     <div className="p-6 pb-24">
       <header className="mb-8">
-        <h1 className="text-3xl font-black text-zinc-900 leading-tight whitespace-nowrap">Balcony Planner</h1>
-        <p className="text-zinc-500 text-sm mt-2">AI-powered spatial & sunlight analysis for your plants.</p>
+        <h1 className="text-3xl font-black text-zinc-900 leading-tight whitespace-nowrap">{t('balcony_planner_title')}</h1>
+        <p className="text-zinc-500 text-sm mt-2">{t('balcony_planner_subtitle')}</p>
       </header>
 
       <div className="space-y-6">
         {/* Image Upload Section */}
         <section>
-          <h2 className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-3">1. Balcony Photo</h2>
+          <h2 className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-3">{t('balcony_photo_step')}</h2>
           
           <div className="grid grid-cols-2 gap-3 mb-4">
             <button 
@@ -185,14 +187,14 @@ export default function BalconyAnalysisScreen() {
               className={`p-4 rounded-2xl border-2 flex flex-col items-center gap-2 transition-all ${isLiveCamera ? 'bg-emerald-50 border-emerald-500 text-emerald-600' : 'bg-white border-zinc-100 text-zinc-600 hover:border-zinc-200'}`}
             >
               <Camera size={24} />
-              <span className="text-[10px] font-bold uppercase">Camera</span>
+              <span className="text-[10px] font-bold uppercase">{t('camera_btn')}</span>
             </button>
             <button 
               onClick={() => fileInputRef.current?.click()}
               className="p-4 rounded-2xl border-2 bg-white border-zinc-100 text-zinc-600 hover:border-zinc-200 flex flex-col items-center gap-2 transition-all"
             >
               <Upload size={24} />
-              <span className="text-[10px] font-bold uppercase">Gallery</span>
+              <span className="text-[10px] font-bold uppercase">{t('gallery_btn')}</span>
             </button>
           </div>
 
@@ -241,8 +243,8 @@ export default function BalconyAnalysisScreen() {
                 <div className="w-12 h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center text-zinc-400 mx-auto mb-3">
                   <Camera size={24} />
                 </div>
-                <p className="text-xs font-bold text-zinc-500">Capture or upload a photo of your balcony</p>
-                <p className="text-[10px] text-zinc-400 mt-1">AI needs a clear view to analyze space & sunlight</p>
+                <p className="text-xs font-bold text-zinc-500">{t('capture_upload_prompt')}</p>
+                <p className="text-[10px] text-zinc-400 mt-1">{t('ai_needs_view')}</p>
               </div>
             )}
             <canvas ref={canvasRef} className="hidden" />
@@ -266,38 +268,38 @@ export default function BalconyAnalysisScreen() {
 
         {/* Plant Input Section */}
         <section>
-          <h2 className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-3">2. Which plants do you want to grow?</h2>
+          <h2 className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-3">{t('plants_grow_step')}</h2>
           <div className="relative">
             <input
               type="text"
               value={plantInput}
               onChange={(e) => setPlantInput(e.target.value)}
-              placeholder="e.g. Tomato, Basil, Cucumber..."
+              placeholder={t('plants_placeholder')}
               className="w-full bg-white border border-zinc-100 rounded-2xl px-5 py-4 text-sm font-medium focus:outline-none focus:border-emerald-500 transition-all shadow-sm"
             />
             <div className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-300">
               <Leaf size={18} />
             </div>
           </div>
-          <p className="text-[10px] text-zinc-400 mt-2 ml-1 italic">Separate multiple plants with commas</p>
+          <p className="text-[10px] text-zinc-400 mt-2 ml-1 italic">{t('separate_commas')}</p>
         </section>
 
         {/* Optional Balcony Details Section */}
         <section>
           <div className="flex justify-between items-center mb-3">
-            <h2 className="text-xs font-bold text-zinc-400 uppercase tracking-widest">3. Balcony Details (Optional)</h2>
-            <span className="text-[10px] font-bold text-zinc-300 uppercase tracking-widest">Optional</span>
+            <h2 className="text-xs font-bold text-zinc-400 uppercase tracking-widest">{t('balcony_details_step')}</h2>
+            <span className="text-[10px] font-bold text-zinc-300 uppercase tracking-widest">{t('optional')}</span>
           </div>
           <div className="relative">
             <textarea
               value={balconyDetails}
               onChange={(e) => setBalconyDetails(e.target.value)}
-              placeholder="e.g. Length: 10ft, Width: 4ft, East facing, high wind area..."
+              placeholder={t('details_placeholder')}
               rows={3}
               className="w-full bg-white border border-zinc-100 rounded-2xl px-5 py-4 text-sm font-medium focus:outline-none focus:border-emerald-500 transition-all shadow-sm resize-none"
             />
           </div>
-          <p className="text-[10px] text-zinc-400 mt-2 ml-1 italic">Provide dimensions or orientation for a more accurate plan</p>
+          <p className="text-[10px] text-zinc-400 mt-2 ml-1 italic">{t('provide_details_advice')}</p>
         </section>
 
         {/* Action Button */}
@@ -313,12 +315,12 @@ export default function BalconyAnalysisScreen() {
           {isAnalyzing ? (
             <>
               <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              Analyzing Space...
+              {t('analyzing_space')}
             </>
           ) : (
             <>
               <Send size={18} />
-              Get Placement Plan
+              {t('get_placement_plan')}
             </>
           )}
         </button>
@@ -333,12 +335,12 @@ export default function BalconyAnalysisScreen() {
             >
               <div className="flex gap-4">
                 <div className="flex-1 bg-zinc-900 p-4 rounded-3xl text-white">
-                  <p className="text-[10px] text-zinc-400 uppercase font-bold tracking-widest mb-1">Estimated Size</p>
+                  <p className="text-[10px] text-zinc-400 uppercase font-bold tracking-widest mb-1">{t('estimated_size')}</p>
                   <p className="text-lg font-black">{analysisResult.estimatedDimensions}</p>
                 </div>
                 <div className={`flex-1 p-4 rounded-3xl border-2 ${analysisResult.isFeasible ? 'bg-emerald-50 border-emerald-100 text-emerald-900' : 'bg-rose-50 border-rose-100 text-rose-900'}`}>
-                  <p className="text-[10px] uppercase font-bold tracking-widest mb-1">Feasibility</p>
-                  <p className="text-lg font-black">{analysisResult.isFeasible ? 'Possible' : 'Not Possible'}</p>
+                  <p className="text-[10px] uppercase font-bold tracking-widest mb-1">{t('feasibility')}</p>
+                  <p className="text-lg font-black">{analysisResult.isFeasible ? t('possible') : t('not_possible')}</p>
                 </div>
               </div>
 
@@ -348,7 +350,7 @@ export default function BalconyAnalysisScreen() {
                     <Info size={18} />
                   </div>
                   <h3 className={`font-bold ${analysisResult.isFeasible ? 'text-emerald-900' : 'text-rose-900'}`}>
-                    {analysisResult.isFeasible ? 'Expert Assessment' : 'Why it won\'t work'}
+                    {analysisResult.isFeasible ? t('expert_assessment') : t('why_not_work')}
                   </h3>
                 </div>
                 <p className={`text-sm leading-relaxed ${analysisResult.isFeasible ? 'text-emerald-800' : 'text-rose-800'}`}>
@@ -357,7 +359,7 @@ export default function BalconyAnalysisScreen() {
               </div>
 
               <div className="space-y-4">
-                <h2 className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Plant-by-Plant Breakdown</h2>
+                <h2 className="text-xs font-bold text-zinc-400 uppercase tracking-widest">{t('plant_breakdown')}</h2>
                 {analysisResult.recommendations.map((rec: any, idx: number) => (
                   <motion.div
                     key={rec.plantName}
@@ -373,7 +375,7 @@ export default function BalconyAnalysisScreen() {
                         </div>
                         <div>
                           <h4 className="font-bold text-zinc-900">{rec.plantName}</h4>
-                          {!rec.isPossible && <span className="text-[9px] font-black text-rose-500 uppercase">Not Recommended</span>}
+                          {!rec.isPossible && <span className="text-[9px] font-black text-rose-500 uppercase">{t('not_recommended')}</span>}
                         </div>
                       </div>
                       {rec.isPossible && (
@@ -387,8 +389,8 @@ export default function BalconyAnalysisScreen() {
                     <div className="flex items-start gap-3 mb-3">
                       <MapPin size={16} className={`${rec.isPossible ? 'text-emerald-500' : 'text-zinc-400'} mt-0.5 flex-shrink-0`} />
                       <div>
-                        <p className={`text-xs font-bold ${rec.isPossible ? 'text-zinc-900' : 'text-zinc-500'}`}>{rec.placement}</p>
-                        <p className="text-xs text-zinc-500 leading-relaxed mt-1">{rec.explanation}</p>
+                        <p className={`text-xs font-bold ${rec.isPossible ? 'text-zinc-900' : 'text-zinc-600'}`}>{rec.placement}</p>
+                        <p className={`text-xs leading-relaxed mt-1 ${rec.isPossible ? 'text-zinc-800' : 'text-zinc-500'}`}>{rec.explanation}</p>
                       </div>
                     </div>
                   </motion.div>
@@ -398,11 +400,11 @@ export default function BalconyAnalysisScreen() {
               <div className="bg-zinc-900 p-6 rounded-3xl text-white">
                 <h3 className="font-bold mb-4 flex items-center gap-2">
                   <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
-                  Pro Tips
+                  {t('pro_tips')}
                 </h3>
                 <ul className="space-y-3">
                   {analysisResult.tips.map((tip: string, idx: number) => (
-                    <li key={idx} className="text-xs text-zinc-400 flex gap-3">
+                    <li key={idx} className="text-xs text-zinc-200 flex gap-3">
                       <span className="text-emerald-400 font-bold">{idx + 1}.</span>
                       {tip}
                     </li>

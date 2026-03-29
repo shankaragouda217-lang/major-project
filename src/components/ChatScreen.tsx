@@ -12,7 +12,6 @@ export default function ChatScreen({ initialQuery, onBack }: { initialQuery: str
   const [isTyping, setIsTyping] = useState(false);
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
-  const chatSessionRef = useRef<any>(null);
   const hasInitialized = useRef(false);
   const isProcessing = useRef(false);
 
@@ -31,6 +30,12 @@ export default function ChatScreen({ initialQuery, onBack }: { initialQuery: str
     }
   }, []);
 
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages, isTyping]);
+
   const handleAsk = async (query: string) => {
     if (!query.trim() || isProcessing.current) return;
     isProcessing.current = true;
@@ -48,7 +53,10 @@ export default function ChatScreen({ initialQuery, onBack }: { initialQuery: str
 
     if (plantMatch && (lowerQuery.includes('how to grow') || lowerQuery.includes('care') || lowerQuery.includes('about'))) {
       const plantKey = plantMatch.name.toLowerCase().replace(/\s+/g, '_').replace(/\(.*\)/, '').trim();
-      const localResponse = `### ${t('expert_advice')} ${t(plantKey)}\n\n${t(plantKey + '_desc')}\n\n**${t('growth_cycle')}:** ${plantMatch.growthTime}\n**${t('key_requirements')}:** ${plantMatch.needs}\n**${t('best_months')}:** ${plantMatch.suitableMonths}\n\n*${t('local_database_note')}*`;
+      const expertAdviceHeader = currentLanguage === 'en' 
+        ? `${t('expert_advice')} ${t(plantKey)}`
+        : `${t(plantKey)} ${t('expert_advice')}`;
+      const localResponse = `### ${expertAdviceHeader}\n\n${t(plantKey + '_desc')}\n\n**${t('growth_cycle')}**: ${plantMatch.growthTime}\n**${t('key_requirements')}**: ${plantMatch.needs}\n**${t('best_months')}**: ${plantMatch.suitableMonths}\n\n*${t('local_database_note')}*`;
       setMessages(prev => [...prev, { role: 'assistant', content: localResponse }]);
       setIsTyping(false);
       isProcessing.current = false;
@@ -130,59 +138,67 @@ export default function ChatScreen({ initialQuery, onBack }: { initialQuery: str
   };
 
   return (
-    <div className="flex flex-col h-screen bg-white">
-      <header className="p-4 border-b border-zinc-100 flex items-center gap-4 bg-white sticky top-0 z-10">
+    <div className="flex flex-col bg-white h-full">
+      <header className="p-4 border-b border-zinc-100 flex items-center gap-4 bg-white shrink-0">
         <button onClick={onBack} className="p-2 hover:bg-zinc-100 rounded-full transition-colors">
           <ArrowLeft size={20} />
         </button>
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-600">
-            <Sparkles size={18} />
+          <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center overflow-hidden border border-emerald-100 shadow-sm">
+            <img 
+              src="https://iili.io/qD8Qbig.png" 
+              alt="Logo" 
+              className="w-8 h-8 object-contain"
+              referrerPolicy="no-referrer"
+            />
           </div>
-          <h1 className="font-bold text-zinc-900">{t('garden_ai_assistant')}</h1>
+          <h1 className="text-xl font-bold text-zinc-900">{t('garden_ai_assistant')}</h1>
         </div>
       </header>
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-6 pb-32">
+      <div ref={scrollRef} className="flex-1 p-4 space-y-6 overflow-y-auto">
         {messages.length === 0 && !isTyping && (
-          <div className="flex flex-col items-center justify-center h-full text-center p-8">
+          <div className="flex flex-col items-center text-center p-4 pt-4">
             <div className="w-16 h-16 bg-emerald-50 rounded-3xl flex items-center justify-center text-emerald-600 mb-4">
               <Bot size={32} />
             </div>
-            <h2 className="text-xl font-bold text-zinc-900 mb-2">{t('how_can_i_help')}</h2>
-            <p className="text-zinc-500 text-sm">{t('ask_about_plant')}</p>
+            <h2 className="text-2xl font-bold text-zinc-900 mb-2">{t('how_can_i_help')}</h2>
+            <p className="text-zinc-900 text-base">{t('ask_about_plant')}</p>
           </div>
         )}
         
-        {messages.map((msg, i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={`flex flex-col gap-3 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
-          >
-            <div className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''} w-full`}>
-              <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${msg.role === 'user' ? 'bg-zinc-100 text-zinc-600' : 'bg-emerald-100 text-emerald-600'}`}>
-                {msg.role === 'user' ? <User size={16} /> : <Bot size={16} />}
-              </div>
-              <div className={`max-w-[85%] p-4 rounded-3xl text-sm leading-relaxed ${msg.role === 'user' ? 'bg-zinc-900 text-white rounded-tr-none' : 'bg-zinc-50 text-zinc-800 rounded-tl-none border border-zinc-100'}`}>
-                <div className="markdown-body">
-                  <Markdown>{msg.content}</Markdown>
+        <AnimatePresence>
+          {messages.map((msg, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={`flex flex-col gap-3 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
+            >
+              <div className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''} w-full`}>
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${msg.role === 'user' ? 'bg-zinc-100 text-zinc-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                  {msg.role === 'user' ? <User size={16} /> : <Bot size={16} />}
+                </div>
+                <div className={`max-w-[85%] p-4 rounded-3xl text-base leading-relaxed ${msg.role === 'user' ? 'bg-zinc-900 text-white rounded-tr-none' : 'bg-zinc-50 text-zinc-800 rounded-tl-none border border-zinc-100'}`}>
+                  <div className="markdown-body">
+                    <Markdown>{msg.content}</Markdown>
+                  </div>
                 </div>
               </div>
-            </div>
-            
-            {msg.role === 'assistant' && (msg.content.includes(t('ai_error_api_key')) || msg.content.includes("API Key Missing")) && (
-              <button 
-                onClick={handleOpenKeySelector}
-                className="ml-11 mt-2 px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl shadow-lg active:scale-95 transition-all flex items-center gap-2"
-              >
-                <Sparkles size={14} />
-                {t('setup_gemini_key')}
-              </button>
-            )}
-          </motion.div>
-        ))}
+              
+              {msg.role === 'assistant' && (msg.content.includes(t('ai_error_api_key')) || msg.content.includes("API Key Missing")) && (
+                <button 
+                  onClick={handleOpenKeySelector}
+                  className="ml-11 mt-2 px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl shadow-lg active:scale-95 transition-all flex items-center gap-2"
+                >
+                  <Sparkles size={14} />
+                  {t('setup_gemini_key')}
+                </button>
+              )}
+            </motion.div>
+          ))}
+        </AnimatePresence>
+
         {isTyping && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -194,14 +210,14 @@ export default function ChatScreen({ initialQuery, onBack }: { initialQuery: str
             </div>
             <div className="bg-zinc-50 p-4 rounded-3xl rounded-tl-none border border-zinc-100 flex items-center gap-2">
               <Loader2 size={16} className="animate-spin text-emerald-600" />
-              <span className="text-xs text-zinc-500 font-medium">{t('ai_thinking')}</span>
+              <span className="text-xs text-zinc-900 font-medium">{t('ai_thinking')}</span>
             </div>
           </motion.div>
         )}
       </div>
 
-      {/* Input Area */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-zinc-100 max-w-md mx-auto">
+      {/* Input Area */} 
+      <div className="p-4 bg-white border-t border-zinc-100">
         <form onSubmit={handleSubmit} className="flex gap-2">
           <input
             type="text"

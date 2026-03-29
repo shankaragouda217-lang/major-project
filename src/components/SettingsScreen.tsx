@@ -9,10 +9,10 @@ import { motion, AnimatePresence } from 'motion/react';
 const SettingItem = ({ icon: Icon, label, value, onChange, type = 'toggle' }: any) => (
   <div className="flex items-center justify-between p-4 bg-white rounded-2xl mb-3 border border-zinc-100">
     <div className="flex items-center gap-3">
-      <div className="p-2 bg-zinc-50 rounded-xl text-zinc-500">
+      <div className="p-2 bg-zinc-50 rounded-xl text-zinc-900">
         <Icon size={20} />
       </div>
-      <span className="font-medium text-zinc-700">{label}</span>
+      <span className="font-medium text-zinc-900">{label}</span>
     </div>
     {type === 'toggle' ? (
       <button 
@@ -22,7 +22,7 @@ const SettingItem = ({ icon: Icon, label, value, onChange, type = 'toggle' }: an
         <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${value ? 'left-7' : 'left-1'}`} />
       </button>
     ) : (
-      <button onClick={onChange} className="text-zinc-400 p-2 hover:bg-zinc-50 rounded-lg transition-colors">
+      <button onClick={onChange} className="text-zinc-800 p-2 hover:bg-zinc-50 rounded-lg transition-colors">
         <ChevronRight size={20} />
       </button>
     )}
@@ -88,12 +88,12 @@ export default function SettingsScreen({ onNavigate }: { onNavigate: (s: any) =>
         </div>
         <div>
           <h3 className="font-bold text-lg text-emerald-900 dark:text-emerald-100">{userData?.displayName}</h3>
-          <p className="text-emerald-600 dark:text-emerald-400 text-sm">{user?.email}</p>
+          <p className="text-emerald-950 dark:text-emerald-400 text-sm">{user?.email}</p>
         </div>
       </div>
 
       <div className="mb-8">
-        <h4 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase mb-4 px-2">Preferences</h4>
+        <h4 className="text-xs font-bold text-zinc-800 dark:text-zinc-500 uppercase mb-4 px-2">Preferences</h4>
         <SettingItem 
           icon={Moon} 
           label={t('dark_mode')} 
@@ -109,7 +109,7 @@ export default function SettingsScreen({ onNavigate }: { onNavigate: (s: any) =>
       </div>
 
       <div className="mb-8">
-        <h4 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase mb-4 px-2">{t('language')}</h4>
+        <h4 className="text-xs font-bold text-zinc-800 dark:text-zinc-500 uppercase mb-4 px-2">{t('language')}</h4>
         <SettingItem 
           icon={Shield} 
           label={t('language')} 
@@ -119,7 +119,7 @@ export default function SettingsScreen({ onNavigate }: { onNavigate: (s: any) =>
       </div>
 
       <div className="mb-8">
-        <h4 className="text-xs font-bold text-zinc-400 uppercase mb-4 px-2">Activity</h4>
+        <h4 className="text-xs font-bold text-zinc-800 uppercase mb-4 px-2">Activity</h4>
         <SettingItem 
           icon={History} 
           label={t('garden_history')} 
@@ -129,7 +129,7 @@ export default function SettingsScreen({ onNavigate }: { onNavigate: (s: any) =>
       </div>
 
       <div className="mb-8">
-        <h4 className="text-xs font-bold text-zinc-400 uppercase mb-4 px-2">Account</h4>
+        <h4 className="text-xs font-bold text-zinc-800 uppercase mb-4 px-2">Account</h4>
         <SettingItem 
           icon={User} 
           label={t('edit_profile')} 
@@ -161,10 +161,10 @@ export default function SettingsScreen({ onNavigate }: { onNavigate: (s: any) =>
           window.dispatchEvent(new Event('toggle-debug'));
         }}
       >
-        <p className="text-[10px] text-zinc-400 font-mono uppercase tracking-widest">
+        <p className="text-[10px] text-zinc-800 font-mono uppercase tracking-widest">
           Garden Intelligence System
         </p>
-        <p className="text-[10px] text-zinc-300 mt-1">
+        <p className="text-[10px] text-zinc-700 mt-1">
           Build: 20260319-v3.0
         </p>
       </div>
@@ -186,7 +186,7 @@ export default function SettingsScreen({ onNavigate }: { onNavigate: (s: any) =>
             >
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-bold text-zinc-900">{t('language')}</h3>
-                <button onClick={() => setShowLanguage(false)} className="p-2 bg-zinc-100 rounded-full text-zinc-500">
+                <button onClick={() => setShowLanguage(false)} className="p-2 bg-zinc-100 rounded-full text-zinc-900">
                   <X size={20} />
                 </button>
               </div>
@@ -209,7 +209,7 @@ export default function SettingsScreen({ onNavigate }: { onNavigate: (s: any) =>
                   >
                     <div className="flex flex-col items-start">
                       <span className={`font-bold ${userData?.settings?.language === lang.id ? 'text-emerald-700' : 'text-zinc-900'}`}>{lang.name}</span>
-                      <span className="text-xs text-zinc-400 font-medium">{lang.native}</span>
+                      <span className="text-xs text-zinc-800 font-medium">{lang.native}</span>
                     </div>
                     {userData?.settings?.language === lang.id && (
                       <div className="w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center text-white">
@@ -243,7 +243,7 @@ export default function SettingsScreen({ onNavigate }: { onNavigate: (s: any) =>
                 <div className="flex flex-col">
                   <h3 className="text-xl font-bold text-zinc-900 dark:text-white">Your History</h3>
                   {history.length > 0 && (
-                    <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest mt-1">
+                    <p className="text-[10px] text-zinc-800 font-bold uppercase tracking-widest mt-1">
                       {history.length} total entries
                     </p>
                   )}
@@ -265,7 +265,7 @@ export default function SettingsScreen({ onNavigate }: { onNavigate: (s: any) =>
                               setIsSelectionMode(false);
                               setSelectedItems([]);
                             }}
-                            className="px-3 py-1.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-xl text-[10px] font-bold hover:bg-zinc-200 transition-all"
+                            className="px-3 py-1.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-950 dark:text-zinc-400 rounded-xl text-[10px] font-bold hover:bg-zinc-200 transition-all"
                           >
                             Cancel
                           </button>
@@ -274,7 +274,7 @@ export default function SettingsScreen({ onNavigate }: { onNavigate: (s: any) =>
                         <>
                           <button 
                             onClick={() => setIsSelectionMode(true)}
-                            className="px-3 py-1.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-xl text-[10px] font-bold hover:bg-zinc-200 transition-all"
+                            className="px-3 py-1.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-950 dark:text-zinc-400 rounded-xl text-[10px] font-bold hover:bg-zinc-200 transition-all"
                           >
                             Select
                           </button>
@@ -294,7 +294,7 @@ export default function SettingsScreen({ onNavigate }: { onNavigate: (s: any) =>
                       setIsSelectionMode(false);
                       setSelectedItems([]);
                     }} 
-                    className="p-2 bg-zinc-100 dark:bg-zinc-800 rounded-full text-zinc-500"
+                    className="p-2 bg-zinc-100 dark:bg-zinc-800 rounded-full text-zinc-900"
                   >
                     <X size={20} />
                   </button>
@@ -304,10 +304,10 @@ export default function SettingsScreen({ onNavigate }: { onNavigate: (s: any) =>
               <div className="flex-1 overflow-y-auto space-y-4 pb-8">
                 {history.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-center p-8">
-                    <div className="w-16 h-16 bg-zinc-50 dark:bg-zinc-800 rounded-full flex items-center justify-center text-zinc-300 dark:text-zinc-700 mb-4">
+                    <div className="w-16 h-16 bg-zinc-50 dark:bg-zinc-800 rounded-full flex items-center justify-center text-zinc-700 dark:text-zinc-700 mb-4">
                       <History size={32} />
                     </div>
-                    <p className="text-zinc-500 text-sm">No history yet. Start exploring your garden!</p>
+                    <p className="text-zinc-900 text-sm">No history yet. Start exploring your garden!</p>
                   </div>
                 ) : (
                   history.map((item, idx) => (
@@ -332,11 +332,11 @@ export default function SettingsScreen({ onNavigate }: { onNavigate: (s: any) =>
                         <div className="flex-1 min-w-0">
                           <div className="flex justify-between items-start mb-1">
                             <h4 className="font-bold text-zinc-900 dark:text-white truncate">{item.title}</h4>
-                            <span className="text-[10px] text-zinc-400 font-medium whitespace-nowrap ml-2">
+                            <span className="text-[10px] text-zinc-800 font-medium whitespace-nowrap ml-2">
                               {new Date(item.timestamp).toLocaleDateString()}
                             </span>
                           </div>
-                          <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-2 mb-2">{item.details}</p>
+                          <p className="text-xs text-zinc-900 dark:text-zinc-400 line-clamp-2 mb-2">{item.details}</p>
                           {item.image && (
                             <div className="aspect-video w-full rounded-2xl overflow-hidden mb-2">
                               <img src={item.image} alt="History item" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
@@ -373,7 +373,7 @@ export default function SettingsScreen({ onNavigate }: { onNavigate: (s: any) =>
               <h3 className="text-xl font-bold text-zinc-900 mb-6 text-center">Edit Profile</h3>
               <div className="space-y-4 mb-8">
                 <div>
-                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest ml-2 mb-1 block">Display Name</label>
+                  <label className="text-[10px] font-bold text-zinc-800 uppercase tracking-widest ml-2 mb-1 block">Display Name</label>
                   <input 
                     type="text"
                     value={newDisplayName}
@@ -386,7 +386,7 @@ export default function SettingsScreen({ onNavigate }: { onNavigate: (s: any) =>
               <div className="flex gap-3">
                 <button 
                   onClick={() => setShowEditProfile(false)}
-                  className="flex-1 p-4 bg-zinc-100 text-zinc-600 font-bold rounded-2xl"
+                  className="flex-1 p-4 bg-zinc-100 text-zinc-950 font-bold rounded-2xl"
                 >
                   Cancel
                 </button>

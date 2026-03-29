@@ -76,6 +76,16 @@ export default function DiseaseDetectionScreen() {
     }
   };
 
+  const translateStatus = (status: string) => {
+    switch (status) {
+      case 'Healthy': return t('status_healthy');
+      case 'Beneficial Insects Found': return t('status_beneficial');
+      case 'Pest Infestation': return t('status_pest');
+      case 'Infected': return t('status_infected');
+      default: return status;
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Healthy':
@@ -150,8 +160,11 @@ export default function DiseaseDetectionScreen() {
       try {
         await addToHistory({ 
           type: 'analysis', 
-          title: `Disease Scan: ${analysis.plantName}`, 
-          details: `${analysis.status} - ${analysis.description}`,
+          title: `${t('disease_scan_title')}: ${analysis.plantName}`, 
+          details: t('disease_scan_details', {
+            status: translateStatus(analysis.status),
+            description: analysis.description
+          }),
           image: image 
         });
       } catch (historyErr) {
@@ -191,7 +204,7 @@ export default function DiseaseDetectionScreen() {
   return (
     <div className="p-6 pb-24">
       <h2 className="text-2xl font-bold text-emerald-900 mb-2">{t('disease_scanner_title')}</h2>
-      <p className="text-zinc-500 mb-8">{t('disease_scanner_desc')}</p>
+      <p className="text-zinc-900 mb-8">{t('disease_scanner_desc')}</p>
 
       <div className="aspect-square w-full bg-zinc-100 rounded-3xl border-2 border-dashed border-zinc-300 flex flex-col items-center justify-center overflow-hidden relative mb-6 shadow-inner">
         {isLiveCamera ? (
@@ -234,7 +247,7 @@ export default function DiseaseDetectionScreen() {
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <AlertCircle size={16} className="text-orange-500" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">{t('diagnosis')}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-800">{t('diagnosis')}</span>
                   </div>
                   <p className="text-sm font-bold text-zinc-900">{result.status}</p>
                 </motion.div>
@@ -247,9 +260,9 @@ export default function DiseaseDetectionScreen() {
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <Search size={16} className="text-emerald-500" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">{t('symptoms')}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-800">{t('symptoms')}</span>
                   </div>
-                  <p className="text-xs font-medium text-zinc-700 leading-tight">{result.symptoms}</p>
+                  <p className="text-xs font-medium text-zinc-900 leading-tight">{result.symptoms}</p>
                 </motion.div>
 
                 <motion.div 
@@ -260,9 +273,9 @@ export default function DiseaseDetectionScreen() {
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <RefreshCw size={16} className="text-blue-500" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">{t('treatment')}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-800">{t('treatment')}</span>
                   </div>
-                  <p className="text-xs font-medium text-zinc-700 leading-tight">{result.treatment}</p>
+                  <p className="text-xs font-medium text-zinc-900 leading-tight">{result.treatment}</p>
                 </motion.div>
               </div>
             )}
@@ -279,12 +292,12 @@ export default function DiseaseDetectionScreen() {
             onClick={() => !analyzing && startCamera()}
             className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-zinc-200 transition-colors"
           >
-            <div className="flex flex-col items-center text-zinc-400">
+            <div className="flex flex-col items-center text-zinc-800">
               <div className="w-16 h-16 bg-zinc-200 rounded-full flex items-center justify-center mb-3">
-                <Plus size={32} className="text-zinc-500" />
+                <Plus size={32} className="text-zinc-900" />
               </div>
-              <p className="font-bold text-zinc-500">{t('tap_to_capture')}</p>
-              <p className="text-xs text-zinc-400 mt-1">{t('camera_gallery')}</p>
+              <p className="font-bold text-zinc-900">{t('tap_to_capture')}</p>
+              <p className="text-xs text-zinc-800 mt-1">{t('camera_gallery')}</p>
             </div>
           </button>
         )}
@@ -366,37 +379,37 @@ export default function DiseaseDetectionScreen() {
           <div className={`p-6 rounded-3xl border-2 ${getStatusColor(result.status)} shadow-sm relative overflow-hidden`}>
             {result.confidence && (
               <div className="absolute top-6 right-6 flex flex-col items-end">
-                <span className="text-[8px] font-black uppercase tracking-widest text-zinc-400 mb-1">{t('confidence')}</span>
+                <span className="text-[8px] font-black uppercase tracking-widest text-zinc-800 mb-1">{t('confidence')}</span>
                 <span className="text-lg font-black text-emerald-600">{Math.round(result.confidence * 100)}%</span>
               </div>
             )}
             <div className="flex items-start justify-between mb-4">
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1 block">{t('analysis_result')}</span>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-800 mb-1 block">{t('analysis_result')}</span>
                 <h3 className="text-2xl font-bold text-zinc-900 leading-tight">{result.plantName}</h3>
               </div>
             </div>
 
             <div className="flex items-center gap-2 mb-6">
               <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${getBadgeColor(result.status)}`}>
-                {result.status}
+                {translateStatus(result.status)}
               </span>
             </div>
 
             {result.why && (
               <div className="mb-6 p-4 bg-white/50 rounded-2xl border border-white/20">
-                <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">{t('why_diagnosis')}</h4>
-                <p className="text-xs font-medium text-zinc-700 leading-relaxed">{result.why}</p>
+                <h4 className="text-[10px] font-black text-zinc-800 uppercase tracking-widest mb-2">{t('why_diagnosis')}</h4>
+                <p className="text-xs font-medium text-zinc-900 leading-relaxed">{result.why}</p>
               </div>
             )}
 
             <div className="grid grid-cols-1 gap-4">
               <div>
-                <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">{t('symptoms')}</h4>
-                <p className="text-xs font-medium text-zinc-600 leading-relaxed">{result.symptoms}</p>
+                <h4 className="text-[10px] font-black text-zinc-800 uppercase tracking-widest mb-2">{t('symptoms')}</h4>
+                <p className="text-xs font-medium text-zinc-800 leading-relaxed">{result.symptoms}</p>
               </div>
               <div>
-                <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">{t('treatment')}</h4>
+                <h4 className="text-[10px] font-black text-zinc-800 uppercase tracking-widest mb-2">{t('treatment')}</h4>
                 <p className="text-xs font-bold text-zinc-800 leading-relaxed">{result.treatment}</p>
               </div>
             </div>
@@ -417,7 +430,7 @@ export default function DiseaseDetectionScreen() {
                     <div className="w-5 h-5 rounded-full border-2 border-emerald-200 flex items-center justify-center mt-0.5">
                       <div className="w-2 h-2 bg-emerald-500 rounded-full" />
                     </div>
-                    <p className="text-sm font-medium text-zinc-700 leading-relaxed">{item}</p>
+                    <p className="text-sm font-medium text-zinc-900 leading-relaxed">{item}</p>
                   </div>
                 ))}
               </div>
@@ -440,7 +453,7 @@ export default function DiseaseDetectionScreen() {
               ) : (
                 <>
                   <h3 className="text-xl font-bold mb-2">{t('did_it_work')}</h3>
-                  <p className="text-zinc-400 text-xs font-medium mb-6 leading-relaxed">
+                  <p className="text-zinc-800 text-xs font-medium mb-6 leading-relaxed">
                     {t('feedback_desc')}
                   </p>
                   <div className="flex gap-3">
@@ -474,7 +487,7 @@ export default function DiseaseDetectionScreen() {
                     </div>
                     <h4 className="font-bold text-zinc-900">{t('fertilizer_guide')}</h4>
                   </div>
-                  <p className="text-zinc-600 text-sm leading-relaxed">
+                  <p className="text-zinc-800 text-sm leading-relaxed">
                     {result.fertilizerSuggestion}
                   </p>
                 </div>
@@ -488,7 +501,7 @@ export default function DiseaseDetectionScreen() {
                     </div>
                     <h4 className="font-bold text-zinc-900">{t('soil_health')}</h4>
                   </div>
-                  <p className="text-zinc-600 text-sm leading-relaxed">
+                  <p className="text-zinc-800 text-sm leading-relaxed">
                     {result.soilAdvice}
                   </p>
                 </div>
@@ -536,8 +549,8 @@ export default function DiseaseDetectionScreen() {
           )}
 
           <div className="bg-zinc-50 p-5 rounded-3xl flex items-start gap-4 border border-zinc-100">
-            <Info size={20} className="text-zinc-400 shrink-0 mt-0.5" />
-            <p className="text-[11px] text-zinc-500 leading-relaxed font-medium">
+            <Info size={20} className="text-zinc-800 shrink-0 mt-0.5" />
+            <p className="text-[11px] text-zinc-900 leading-relaxed font-medium">
               <span className="font-black uppercase tracking-tighter mr-1">{t('note')}:</span>
               {t('ai_note')}
             </p>

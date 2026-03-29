@@ -14,7 +14,7 @@ const FAQItem = ({ question, answer }: { question: string, answer: string }) => 
         className="w-full py-4 flex items-center justify-between text-left group"
       >
         <span className="font-bold text-zinc-800 group-hover:text-emerald-600 transition-colors">{question}</span>
-        <ChevronRight size={18} className={`text-zinc-400 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
+        <ChevronRight size={18} className={`text-zinc-600 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
       </button>
       <AnimatePresence>
         {isOpen && (
@@ -24,7 +24,7 @@ const FAQItem = ({ question, answer }: { question: string, answer: string }) => 
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-            <div className="pb-4 text-sm text-zinc-500 leading-relaxed markdown-body">
+            <div className="pb-4 text-sm text-zinc-700 leading-relaxed markdown-body">
               <Markdown>{answer}</Markdown>
             </div>
           </motion.div>
@@ -124,7 +124,7 @@ export default function HelpSupportScreen({ onBack, onNavigate }: { onBack: () =
   return (
     <div className="min-h-screen bg-white pb-24">
       <header className="p-6 flex items-center gap-4 border-b border-zinc-50 sticky top-0 bg-white/80 backdrop-blur-md z-10">
-        <button onClick={onBack} className="p-2 bg-zinc-100 rounded-full text-zinc-600 active:scale-90 transition-transform">
+        <button onClick={onBack} className="p-2 bg-zinc-100 rounded-full text-zinc-800 active:scale-90 transition-transform">
           <ChevronRight size={20} className="rotate-180" />
         </button>
         <h1 className="text-xl font-bold text-zinc-900">{t('help_support')}</h1>
@@ -133,7 +133,7 @@ export default function HelpSupportScreen({ onBack, onNavigate }: { onBack: () =
       <div className="p-6 space-y-8">
         {/* Quick Guides */}
         <section>
-          <h2 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-4 ml-1">Quick Guides</h2>
+          <h2 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em] mb-4 ml-1">Quick Guides</h2>
           <div className="grid grid-cols-2 gap-4">
             <button 
               onClick={() => setActiveGuide('getting-started')}
@@ -143,7 +143,7 @@ export default function HelpSupportScreen({ onBack, onNavigate }: { onBack: () =
                 <Zap size={20} />
               </div>
               <h3 className="font-bold text-emerald-900 text-sm mb-1">Getting Started</h3>
-              <p className="text-[10px] text-emerald-700/60 font-medium leading-tight">Learn the basics of garden tracking.</p>
+              <p className="text-[10px] text-emerald-900/80 font-medium leading-tight">Learn the basics of garden tracking.</p>
             </button>
             <button 
               onClick={() => setActiveGuide('plant-safety')}
@@ -153,14 +153,14 @@ export default function HelpSupportScreen({ onBack, onNavigate }: { onBack: () =
                 <Shield size={20} />
               </div>
               <h3 className="font-bold text-blue-900 text-sm mb-1">Plant Safety</h3>
-              <p className="text-[10px] text-blue-700/60 font-medium leading-tight">How to protect your plants from pests.</p>
+              <p className="text-[10px] text-blue-900/80 font-medium leading-tight">How to protect your plants from pests.</p>
             </button>
           </div>
         </section>
 
         {/* FAQs */}
         <section>
-          <h2 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-2 ml-1">Frequently Asked Questions</h2>
+          <h2 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em] mb-2 ml-1">Frequently Asked Questions</h2>
           <div className="bg-white rounded-3xl border border-zinc-100 px-5 shadow-sm">
             {faqs.map((faq, idx) => (
               <FAQItem key={idx} question={faq.question} answer={faq.answer} />
@@ -170,19 +170,19 @@ export default function HelpSupportScreen({ onBack, onNavigate }: { onBack: () =
 
         {/* Contact Support */}
         <section>
-          <h2 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-4 ml-1">Contact Support</h2>
+          <h2 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em] mb-4 ml-1">Contact Support</h2>
           <div className="space-y-3">
             <button 
               onClick={() => setIsLiveChatOpen(true)}
               className="w-full flex items-center justify-between p-4 bg-zinc-50 rounded-2xl border border-zinc-100 active:scale-[0.98] transition-all relative"
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-zinc-600 shadow-sm">
+                <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-zinc-800 shadow-sm">
                   <MessageSquare size={20} />
                 </div>
                 <div>
                   <h4 className="font-bold text-zinc-800 text-sm">Live Chat</h4>
-                  <p className="text-[10px] text-zinc-500 font-medium">Chat with Support AI</p>
+                  <p className="text-[10px] text-zinc-700 font-medium">Chat with Support AI</p>
                 </div>
               </div>
               <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
@@ -196,7 +196,7 @@ export default function HelpSupportScreen({ onBack, onNavigate }: { onBack: () =
             <HelpCircle size={80} />
           </div>
           <h3 className="text-xl font-bold mb-2 relative z-10">Still need help?</h3>
-          <p className="text-sm text-zinc-400 mb-6 relative z-10">Join our community of 50,000+ gardeners and get advice from experts.</p>
+          <p className="text-sm text-zinc-600 mb-6 relative z-10">Join our community of 50,000+ gardeners and get advice from experts.</p>
           <button 
             onClick={() => onNavigate('community')}
             className="w-full py-4 bg-emerald-500 text-white font-bold rounded-2xl shadow-lg shadow-emerald-500/20 active:scale-95 transition-all relative z-10"
@@ -236,12 +236,12 @@ export default function HelpSupportScreen({ onBack, onNavigate }: { onBack: () =
               <div className="p-8 space-y-6">
                 {guideContent[activeGuide].steps.map((step, idx) => (
                   <div key={idx} className="flex gap-4">
-                    <div className="flex-shrink-0 w-6 h-6 bg-zinc-100 rounded-full flex items-center justify-center text-[10px] font-black text-zinc-400">
+                    <div className="flex-shrink-0 w-6 h-6 bg-zinc-100 rounded-full flex items-center justify-center text-[10px] font-black text-zinc-600">
                       0{idx + 1}
                     </div>
                     <div>
                       <h4 className="font-bold text-zinc-800 text-sm mb-1">{step.title}</h4>
-                      <p className="text-xs text-zinc-500 leading-relaxed">{step.desc}</p>
+                      <p className="text-xs text-zinc-700 leading-relaxed">{step.desc}</p>
                     </div>
                   </div>
                 ))}

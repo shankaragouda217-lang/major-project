@@ -76,7 +76,7 @@ function AppContent() {
         }}
       />
 
-      <div className="relative z-10 max-w-md mx-auto pb-32">
+      <div className={`relative z-10 max-w-md mx-auto ${currentScreen === 'chat' ? '' : 'pb-32'}`}>
         <AnimatePresence mode="wait">
           <motion.div
             key={currentScreen}
@@ -84,6 +84,7 @@ function AppContent() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.2 }}
+            className={currentScreen === 'chat' ? 'h-screen' : ''}
           >
             {renderScreen()}
           </motion.div>
