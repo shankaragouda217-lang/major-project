@@ -256,12 +256,12 @@ export default function GrowthTrackerScreen() {
     <div className="p-3 pb-16 max-w-4xl mx-auto">
       <header className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-100/50 pb-4">
         <div className="flex-shrink-0">
-          <h1 className="text-lg sm:text-xl font-black text-emerald-950 tracking-tighter uppercase leading-none mb-1 whitespace-nowrap">
+          <h1 className="text-xl sm:text-2xl font-black text-emerald-950 tracking-tighter uppercase leading-none mb-1 whitespace-nowrap">
             {t('track_growth')}
           </h1>
           <div className="flex items-center gap-1.5">
             <div className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse" />
-            <p className="text-zinc-950 font-bold uppercase tracking-widest text-[7px]">{t('ai_cultivation_intelligence')}</p>
+            <p className="text-zinc-950 font-bold uppercase tracking-widest text-[9px]">{t('ai_cultivation_intelligence')}</p>
           </div>
         </div>
         <div className="flex gap-1.5">
@@ -320,7 +320,7 @@ export default function GrowthTrackerScreen() {
                   <button
                     key={p}
                     onClick={() => setPlantName(p)}
-                    className={`px-2 py-0.5 rounded-md text-[7px] font-black uppercase tracking-widest transition-all ${
+                    className={`px-2 py-0.5 rounded-md text-xs font-medium uppercase tracking-normal transition-all ${
                       plantName === p 
                         ? 'bg-emerald-950 text-white shadow-sm' 
                         : 'bg-zinc-100 text-zinc-950 hover:bg-zinc-200'
@@ -344,7 +344,7 @@ export default function GrowthTrackerScreen() {
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="text-[7px] font-black text-zinc-950 uppercase tracking-widest block">{t('days_planted')}</label>
+                    <label className="text-[9px] font-black text-zinc-950 uppercase tracking-widest block">{t('days_planted')}</label>
                     <div className="flex items-baseline gap-1">
                       <input 
                         type="number" 
@@ -357,10 +357,11 @@ export default function GrowthTrackerScreen() {
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[7px] font-black text-zinc-950 uppercase tracking-widest block">{t('total_cycle')}</label>
+                    <label className="text-[9px] font-black text-zinc-950 uppercase tracking-widest block">{t('total_cycle')}</label>
                     <div className="flex items-baseline gap-1">
                       <input 
-                        type="number" 
+                        type="text"
+inputMode="numeric" 
                         value={harvestDays}
                         onChange={(e) => setHarvestDays(e.target.value)}
                         placeholder=""
@@ -379,7 +380,7 @@ export default function GrowthTrackerScreen() {
             <div className="relative z-10">
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <h4 className="text-[7px] font-black uppercase tracking-[0.2em] text-emerald-500 mb-0.5">{t('growth_status')}</h4>
+                  <h4 className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-500 mb-0.5">{t('growth_status')}</h4>
                   <p className="text-base font-black text-white">{Math.round(progress)}% {t('complete')}</p>
                 </div>
                 <div className="w-8 h-8 bg-emerald-500/20 rounded-lg flex items-center justify-center text-emerald-400 border border-emerald-500/30">

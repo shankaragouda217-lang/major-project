@@ -353,64 +353,92 @@ export default function DashboardScreen({ onNavigate, onAskAI }: { onNavigate: (
 
 
       {/* Weather & Location Widget */}
-      <div className="mb-4">
-        <div className="bg-zinc-900 rounded-[1.75rem] p-4 text-white relative overflow-hidden shadow-xl shadow-zinc-200">
-          <div className="absolute top-0 right-0 p-4 opacity-10">
-            <MapPin size={50} />
-          </div>
+      {/* Weather & Location Widget */}
+<div className="mb-4">
+  <div className="bg-zinc-900 rounded-[1.75rem] p-4 text-white relative overflow-hidden shadow-xl shadow-zinc-200">
+    
+    <div className="absolute top-0 right-0 p-4 opacity-10">
+      <MapPin size={50} />
+    </div>
+
+    <div className="flex justify-between items-start mb-2 relative z-10">
+      <div className="flex-1">
+        <div className="flex items-center gap-1 mb-0.5">
+          <div className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
           
-          <div className="flex justify-between items-start mb-2 relative z-10">
-            <div className="flex-1">
-              <div className="flex items-center gap-1 mb-0.5">
-                <div className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-700">{t('live_environment')}</h3>
-              </div>
-              <p className="text-base font-black tracking-tight truncate pr-4">{isLocationEnabled && cityName ? cityName : t('global_sync')}</p>
-              {sensors.lastUpdated && (
-                <p className="text-[10px] text-zinc-700 font-bold uppercase tracking-wider mt-0.5">
-                  {t('live')} • {new Date(sensors.lastUpdated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </p>
-              )}
-            </div>
-            <div className="flex flex-col items-end gap-1">
-              <button 
-                onClick={() => isLocationEnabled ? disableLiveLocation() : enableLiveLocation()}
-                className={`px-2 py-0.5 rounded-md text-[10px] font-black tracking-widest transition-all shadow-lg ${isLocationEnabled ? 'bg-emerald-500 text-white shadow-emerald-500/20' : 'bg-white/10 text-white hover:bg-white/20'}`}
-              >
-                {isLocationEnabled ? t('location_on') : t('location_off')}
-              </button>
-              {isLocationEnabled && (
-                <button 
-                  onClick={handleRefreshWeather}
-                  className="p-1 bg-white/5 rounded-md text-zinc-600 hover:text-white transition-colors border border-white/5"
-                >
-                  <RefreshCw size={12} />
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-1.5 relative z-10 mb-2">
-            {forecast.map((f, i) => (
-              <div key={i} className={`flex flex-col items-center text-center p-2 rounded-xl backdrop-blur-md border transition-all ${i === 0 ? 'bg-white/10 border-white/20 shadow-xl' : 'bg-white/5 border-white/5 opacity-60'}`}>
-                <span className="text-[10px] font-black text-zinc-600 uppercase mb-0.5 tracking-widest">{f.day}</span>
-                <f.icon size={16} className={f.condition === 'Rain' ? 'text-blue-400' : 'text-amber-400'} />
-                <span className="text-sm font-black mt-0.5">{f.temp}°C</span>
-                <span className="text-[10px] font-bold text-zinc-700 mt-0.5 uppercase tracking-tighter">{f.condition}</span>
-              </div>
-            ))}
-          </div>
-
-          {sensors.temp > 30 && (
-            <div className="mt-2 p-2 bg-amber-400/10 border border-amber-400/20 rounded-lg flex items-start gap-2 text-amber-400">
-              <AlertCircle size={12} className="mt-0.5 shrink-0" />
-              <p className="text-xs font-bold leading-relaxed">
-                {t('heatwave_alert')}
-              </p>
-            </div>
-          )}
+          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-300">
+            {t('live_environment')}
+          </h3>
         </div>
+
+        <p className="text-base font-black tracking-tight truncate pr-4 text-white">
+          {isLocationEnabled && cityName ? cityName : t('global_sync')}
+        </p>
+
+        
       </div>
+
+      <div className="flex flex-col items-end gap-1">
+        <button 
+          onClick={() => isLocationEnabled ? disableLiveLocation() : enableLiveLocation()}
+          className={`px-2 py-0.5 rounded-md text-[10px] font-black tracking-widest transition-all shadow-lg ${
+            isLocationEnabled 
+              ? 'bg-emerald-500 text-white shadow-emerald-500/20' 
+              : 'bg-white/10 text-white hover:bg-white/20'
+          }`}
+        >
+          {isLocationEnabled ? t('location_on') : t('location_off')}
+        </button>
+
+        {isLocationEnabled && (
+          <button 
+            onClick={handleRefreshWeather}
+            className="p-1 bg-white/10 rounded-md text-zinc-300 hover:text-white transition-colors border border-white/10"
+          >
+            <RefreshCw size={12} />
+          </button>
+        )}
+      </div>
+    </div>
+
+    {/* FORECAST */}
+    <div className="grid grid-cols-3 gap-2 relative z-10 mb-2">
+      {forecast.map((f, i) => (
+        <div 
+          key={i} 
+          className={`flex flex-col items-center text-center p-2 rounded-xl backdrop-blur-md border transition-all ${
+            i === 0 
+              ? 'bg-white/15 border-white/30 shadow-xl' 
+              : 'bg-white/10 border-white/20 opacity-90'
+          }`}
+        >
+          <span className="text-[10px] font-black text-zinc-300 uppercase mb-0.5 tracking-widest">
+            {f.day}
+          </span>
+
+          <f.icon size={16} className="text-amber-400" />
+
+          <span className="text-sm font-black mt-0.5 text-white">
+            {f.temp}°C
+          </span>
+
+          <span className="text-[10px] font-bold text-zinc-400 mt-0.5 uppercase tracking-tighter">
+            {f.condition}
+          </span>
+        </div>
+      ))}
+    </div>
+
+    {sensors.temp > 30 && (
+      <div className="mt-2 p-2 bg-amber-400/10 border border-amber-400/20 rounded-lg flex items-start gap-2 text-amber-400">
+        <AlertCircle size={12} className="mt-0.5 shrink-0" />
+        <p className="text-xs font-bold leading-relaxed">
+          {t('heatwave_alert')}
+        </p>
+      </div>
+    )}
+  </div>
+</div>
 
       <div className="grid grid-cols-2 gap-3 mb-4">
         <SensorCard

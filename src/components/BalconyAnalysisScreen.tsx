@@ -173,13 +173,13 @@ export default function BalconyAnalysisScreen() {
     <div className="p-6 pb-24">
       <header className="mb-8">
         <h1 className="text-3xl font-black text-zinc-900 leading-tight whitespace-nowrap">{t('balcony_planner_title')}</h1>
-        <p className="text-zinc-500 text-sm mt-2">{t('balcony_planner_subtitle')}</p>
+        <p className="text-zinc-700 text-sm mt-2">{t('balcony_planner_subtitle')}</p>
       </header>
 
       <div className="space-y-6">
         {/* Image Upload Section */}
         <section>
-          <h2 className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-3">{t('balcony_photo_step')}</h2>
+          <h2 className="text-xs font-bold text-zinc-700 uppercase tracking-widest mb-3">{t('balcony_photo_step')}</h2>
           
           <div className="grid grid-cols-2 gap-3 mb-4">
             <button 
@@ -268,7 +268,7 @@ export default function BalconyAnalysisScreen() {
 
         {/* Plant Input Section */}
         <section>
-          <h2 className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-3">{t('plants_grow_step')}</h2>
+          <h2 className="text-xs font-bold text-zinc-700 uppercase tracking-widest mb-3">{t('plants_grow_step')}</h2>
           <div className="relative">
             <input
               type="text"
@@ -281,13 +281,13 @@ export default function BalconyAnalysisScreen() {
               <Leaf size={18} />
             </div>
           </div>
-          <p className="text-[10px] text-zinc-400 mt-2 ml-1 italic">{t('separate_commas')}</p>
+          <p className="text-[10px] text-zinc-600 mt-2 ml-1 italic">{t('separate_commas')}</p>
         </section>
 
         {/* Optional Balcony Details Section */}
         <section>
           <div className="flex justify-between items-center mb-3">
-            <h2 className="text-xs font-bold text-zinc-400 uppercase tracking-widest">{t('balcony_details_step')}</h2>
+            <h2 className="text-xs font-bold text-zinc-700 uppercase tracking-widest">{t('balcony_details_step')}</h2>
             <span className="text-[10px] font-bold text-zinc-300 uppercase tracking-widest">{t('optional')}</span>
           </div>
           <div className="relative">
@@ -299,7 +299,7 @@ export default function BalconyAnalysisScreen() {
               className="w-full bg-white border border-zinc-100 rounded-2xl px-5 py-4 text-sm font-medium focus:outline-none focus:border-emerald-500 transition-all shadow-sm resize-none"
             />
           </div>
-          <p className="text-[10px] text-zinc-400 mt-2 ml-1 italic">{t('provide_details_advice')}</p>
+          <p className="text-[10px] text-zinc-600 mt-2 ml-1 italic">{t('provide_details_advice')}</p>
         </section>
 
         {/* Action Button */}
@@ -404,7 +404,7 @@ export default function BalconyAnalysisScreen() {
                 </h3>
                 <ul className="space-y-3">
                   {analysisResult.tips.map((tip: string, idx: number) => (
-                    <li key={idx} className="text-xs text-zinc-200 flex gap-3">
+                    <li key={idx} className="text-xs text-zinc-600 flex gap-3">
                       <span className="text-emerald-400 font-bold">{idx + 1}.</span>
                       {tip}
                     </li>

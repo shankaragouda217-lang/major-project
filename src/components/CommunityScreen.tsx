@@ -1,10 +1,36 @@
+import { useState } from 'react';
 import { Users, MapPin, Clock, AlertTriangle } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useApp } from '../AppContext';
 import { formatDistanceToNow } from 'date-fns';
 
 export default function CommunityScreen() {
-  const { reports } = useApp();
+  const { reports, deleteMultipleHistoryItems } = useApp();
+
+  const [selectedReports, setSelectedReports] = useState<string[]>([]);
+
+  // Toggle select
+  const toggleSelect = (id: string) => {
+    setSelectedReports(prev =>
+      prev.includes(id)
+        ? prev.filter(item => item !== id)
+        : [...prev, id]
+    );
+  };
+
+  // Select all
+  const selectAll = () => {
+    setSelectedReports(reports.map(r => r.id));
+  };
+
+  // Clear selected
+  const clearSelected = () => {
+  if (selectedReports.length === 0) return;
+
+  deleteMultipleHistoryItems(selectedReports);
+  setSelectedReports([]);
+};
+  };
 
   return (
     <div className="pb-24">
@@ -17,6 +43,23 @@ export default function CommunityScreen() {
             <p className="text-zinc-700 font-medium">
               Real-time updates from local farmers
             </p>
+
+            {/* ✅ NEW BUTTONS */}
+            <div className="flex gap-2 mt-3">
+              <button 
+                onClick={selectAll}
+                className="px-3 py-1 text-xs font-bold bg-zinc-900 text-white rounded-lg"
+              >
+                Select All
+              </button>
+
+              <button 
+                onClick={clearSelected}
+                className="px-3 py-1 text-xs font-bold bg-red-500 text-white rounded-lg"
+              >
+                Clear Selected
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -30,16 +73,30 @@ export default function CommunityScreen() {
           <div className="text-center py-20 bg-zinc-50 rounded-[40px] border-2 border-dashed border-zinc-200">
             <Users className="mx-auto text-zinc-700 mb-4" size={48} />
             <p className="text-zinc-700 font-bold">No community reports yet</p>
-            <p className="text-zinc-800 text-xs mt-1">Be the first to share your plant's health!</p>
+            <p className="text-zinc-800 text-xs mt-1">
+              Be the first to share your plant's health!
+            </p>
           </div>
         ) : (
           reports.map((report) => (
             <motion.div 
               key={report.id}
+              onClick={() => toggleSelect(report.id)}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white border-2 border-zinc-100 rounded-[32px] overflow-hidden shadow-sm"
+              className={`relative cursor-pointer ${
+                selectedReports.includes(report.id)
+                  ? 'border-emerald-500 bg-emerald-50'
+                  : 'bg-white border-2 border-zinc-100'
+              } rounded-[32px] overflow-hidden shadow-sm`}
             >
+              {/* ✅ Selected Badge */}
+              {selectedReports.includes(report.id) && (
+                <div className="absolute top-3 right-3 bg-emerald-500 text-white text-[10px] px-2 py-1 rounded">
+                  Selected
+                </div>
+              )}
+
               <div className="p-5">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
@@ -47,7 +104,9 @@ export default function CommunityScreen() {
                       {report.userName.charAt(0)}
                     </div>
                     <div>
-                      <h4 className="font-bold text-zinc-900 text-sm">{report.userName}</h4>
+                      <h4 className="font-bold text-zinc-900 text-sm">
+                        {report.userName}
+                      </h4>
                       <div className="flex items-center gap-2 text-[10px] text-zinc-800 font-bold uppercase tracking-widest">
                         <MapPin size={10} /> {report.location}
                         <span className="mx-1">•</span>
@@ -55,14 +114,20 @@ export default function CommunityScreen() {
                       </div>
                     </div>
                   </div>
+
                   <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                    report.status === 'Healthy' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
+                    report.status === 'Healthy' 
+                      ? 'bg-emerald-50 text-emerald-600' 
+                      : 'bg-red-50 text-red-600'
                   }`}>
                     {report.status}
                   </div>
                 </div>
                 
-                <h3 className="font-bold text-zinc-900 mb-2">{report.plantName}</h3>
+                <h3 className="font-bold text-zinc-900 mb-2">
+                  {report.plantName}
+                </h3>
+
                 <p className="text-sm text-zinc-800 leading-relaxed mb-4">
                   {report.description}
                 </p>
