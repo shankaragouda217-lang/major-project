@@ -547,34 +547,42 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log("Attempting IP-based location fallback...");
       
-      // Try ipapi.co first
-      try {
-        const res = await fetchWithTimeout('https://ipapi.co/json/', {}, 5000);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.latitude && data.longitude) {
-            console.log("IP Location detected (ipapi.co):", data.city, data.latitude, data.longitude);
-            lastCoords.current = { lat: data.latitude, lon: data.longitude };
-            fetchWeatherData(data.latitude, data.longitude, true);
-            return;
-          }
-        }
-      } catch (e) {
-        console.warn("ipapi.co failed, trying ip-api.com...", e);
-      }
+      // List of IP geolocation providers to try in sequence
+      const providers = [
+        { url: 'https://ipapi.co/json/', lat: 'latitude', lon: 'longitude', city: 'city' },
+        { url: 'https://ip-api.com/json/', lat: 'lat', lon: 'lon', city: 'city' },
+        { url: 'https://freegeoip.app/json/', lat: 'latitude', lon: 'longitude', city: 'city' },
+        { url: 'https://geolocation-db.com/json/', lat: 'latitude', lon: 'longitude', city: 'city' }
+      ];
 
-      // Fallback to ip-api.com
-      const res2 = await fetchWithTimeout('http://ip-api.com/json/', {}, 5000);
-      if (res2.ok) {
-        const data = await res2.json();
-        if (data.lat && data.lon) {
-          console.log("IP Location detected (ip-api.com):", data.city, data.lat, data.lon);
-          lastCoords.current = { lat: data.lat, lon: data.lon };
-          fetchWeatherData(data.lat, data.lon, true);
+      for (const provider of providers) {
+        try {
+          const res = await fetchWithTimeout(provider.url, {}, 5000);
+          if (res.ok) {
+            const data = await res.json();
+            const lat = data[provider.lat];
+            const lon = data[provider.lon];
+            if (lat && lon) {
+              console.log(`IP Location detected (${new URL(provider.url).hostname}):`, data[provider.city], lat, lon);
+              lastCoords.current = { lat, lon };
+              fetchWeatherData(lat, lon, true);
+              return;
+            }
+          }
+        } catch (e) {
+          console.warn(`IP provider ${provider.url} failed:`, e);
+          continue; // Try next provider
         }
       }
+      
+      throw new Error("All IP geolocation providers failed");
     } catch (error) {
       console.error("IP fallback failed completely:", error);
+      // Final fallback to a default location (e.g., Bengaluru) if everything fails
+      const defaultLat = 12.9716;
+      const defaultLon = 77.5946;
+      lastCoords.current = { lat: defaultLat, lon: defaultLon };
+      fetchWeatherData(defaultLat, defaultLon, true);
     }
   }, [fetchWeatherData]);
 
