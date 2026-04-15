@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { useApp } from '../AppContext';
 import { GoogleGenAI } from "@google/genai";
 import Markdown from 'react-markdown';
-import { HelpCircle, Search, ChevronRight, MessageSquare, Mail, Phone, ExternalLink, Book, Shield, Zap, X } from 'lucide-react';
+import { HelpCircle, Search, ChevronRight, MessageSquare, Mail, Phone, ExternalLink, Book, Shield, Zap, X, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { getLanguageName } from '../lib/utils';
 
 const FAQItem = ({ question, answer }: { question: string, answer: string }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -34,62 +35,57 @@ const FAQItem = ({ question, answer }: { question: string, answer: string }) => 
   );
 };
 
-export default function HelpSupportScreen({ onBack, onNavigate }: { onBack: () => void, onNavigate: (s: any) => void }) {
-  const { t, user, userData } = useApp();
+export default function HelpSupportScreen({ onBack, onNavigate, onAskAI }: { onBack: () => void, onNavigate: (s: any) => void, onAskAI: (q: string) => void }) {
+  const { t, user, userData, currentLanguage } = useApp();
   const [activeGuide, setActiveGuide] = useState<'getting-started' | 'plant-safety' | null>(null);
   const [isLiveChatOpen, setIsLiveChatOpen] = useState(false);
-  const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'ai', text: string }[]>([
-    { role: 'ai', text: "Hello! I'm your Garden Support Assistant. How can I help you today?" }
+  const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'ai', text: string, showAIButton?: boolean }>([
+    { role: 'ai', text: t('hello_support') }
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
 
   const faqs = [
     {
-      question: "Support AI vs. Garden AI: What's the difference?",
-      answer: "Support AI (here) is for app help, troubleshooting, and general gardening tips. 'Ask Garden AI' (on the home screen) is for deep analysis of your specific plants, identifying diseases from photos, and detailed care plans."
+      question: t('faq_1_q'),
+      answer: t('faq_1_a')
     },
     {
-      question: "How does the Soil Moisture sensor work?",
-      answer: "Our system uses advanced algorithms to simulate real-time soil moisture based on your last watering time, local temperature, and humidity. For the best accuracy, ensure you tap 'I just watered my plant' whenever you water."
+      question: t('faq_2_q'),
+      answer: t('faq_2_a')
     },
     {
-      question: "How do I use the AI Plant Detection?",
-      answer: "Go to the 'Track Growth' screen and tap the camera icon. You can either take a live photo or upload one from your gallery. Our AI will analyze the plant's health and provide expert advice."
+      question: t('faq_3_q'),
+      answer: t('faq_3_a')
     },
     {
-      question: "What are Disease Alerts?",
-      answer: "Disease Alerts are real-time notifications based on local weather patterns and community reports. If conditions in your area favor specific pests or diseases (like high humidity for Blight), we'll warn you instantly."
+      question: t('faq_5_q'),
+      answer: t('faq_5_a')
     },
     {
-      question: "Can I use the app offline?",
-      answer: "While some features like basic sensor tracking work offline using cached data, AI analysis and community features require an active internet connection."
-    },
-    {
-      question: "How do I change the app language?",
-      answer: "You can change the language in Settings > Language. We currently support English, Hindi, Tamil, Telugu, and Kannada."
+      question: t('faq_6_q'),
+      answer: t('faq_6_a')
     }
   ];
 
   const guideContent = {
     'getting-started': {
-      title: 'Getting Started',
+      title: t('getting_started_title'),
       icon: <Zap size={32} className="text-emerald-600" />,
       color: 'bg-emerald-50',
       steps: [
-        { title: 'Add your first plant', desc: 'Use the search bar on the home screen to find your plant and add it to your garden.' },
-        { title: 'Track growth', desc: 'Take photos of your plant regularly to see its progress over time.' },
-        { title: 'Monitor sensors', desc: 'Keep an eye on moisture, temperature, and light levels to keep your plant happy.' }
+        { title: t('add_first_plant'), desc: t('add_first_plant_desc') },
+        { title: t('track_growth_title'), desc: t('track_growth_desc') },
+        { title: t('monitor_sensors_title'), desc: t('monitor_sensors_desc') }
       ]
     },
     'plant-safety': {
-      title: 'Plant Safety',
+      title: t('plant_safety_title'),
       icon: <Shield size={32} className="text-blue-600" />,
       color: 'bg-blue-50',
       steps: [
-        { title: 'Avoid overwatering', desc: 'Check the soil moisture sensor before watering. Most plants prefer to dry out slightly.' },
-        { title: 'Watch for pests', desc: 'Check under leaves regularly for small insects or unusual spots.' },
-        { title: 'Check Disease Alerts', desc: 'We notify you when local conditions are risky for common plant diseases.' }
+        { title: t('avoid_overwatering'), desc: t('avoid_overwatering_desc') },
+        { title: t('watch_pests'), desc: t('watch_pests_desc') }
       ]
     }
   };
@@ -104,16 +100,32 @@ export default function HelpSupportScreen({ onBack, onNavigate }: { onBack: () =
     setIsTyping(true);
 
     try {
+      const targetLanguage = getLanguageName(currentLanguage);
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+        model: "gemini-2.0-flash",
         contents: userMsg,
         config: {
-          systemInstruction: "You are a helpful Garden Support Assistant for the 'Garden Intelligence' app. Answer questions about gardening and how to use the app. Keep responses concise and friendly."
+          systemInstruction: `You are a helpful Garden Support Assistant for the 'Smart Urban Farming' app. Your primary role is to help users with app-related issues, settings, and navigation. 
+
+          IMPORTANT: If a user asks general gardening questions (e.g., 'how to grow tomatoes', 'pest control', 'plant care'), DO NOT answer them directly. Instead, politely explain that for expert gardening advice, they should use the dedicated 'AI Assistance' feature available on the Home screen or by asking the AI in the main chat. 
+
+          IMPORTANT: You MUST respond in ${targetLanguage}.
+          
+          Keep responses concise and friendly.`
         }
       });
       
-      setChatMessages(prev => [...prev, { role: 'ai', text: response.text || "I'm sorry, I couldn't process that. How else can I help?" }]);
+      const aiText = response.text || "I'm sorry, I couldn't process that. How else can I help?";
+      const isGardeningQuery = aiText.toLowerCase().includes('ai assistance') || 
+                               aiText.toLowerCase().includes('main chat') ||
+                               aiText.toLowerCase().includes('home screen');
+
+      setChatMessages(prev => [...prev, { 
+        role: 'ai', 
+        text: aiText,
+        showAIButton: isGardeningQuery
+      }]);
     } catch (error) {
       setChatMessages(prev => [...prev, { role: 'ai', text: "I'm having trouble connecting right now. Please try again later." }]);
     } finally {
@@ -122,8 +134,8 @@ export default function HelpSupportScreen({ onBack, onNavigate }: { onBack: () =
   };
 
   return (
-    <div className="min-h-screen bg-white pb-24">
-      <header className="p-6 flex items-center gap-4 border-b border-zinc-50 sticky top-0 bg-white/80 backdrop-blur-md z-10">
+    <div className="min-h-screen bg-white pb-32 text-zinc-900 dark:text-zinc-900">
+      <header className="p-6 flex items-center gap-4 border-b border-zinc-50 sticky top-0 bg-white z-10">
         <button onClick={onBack} className="p-2 bg-zinc-100 rounded-full text-zinc-800 active:scale-90 transition-transform">
           <ChevronRight size={20} className="rotate-180" />
         </button>
@@ -133,7 +145,7 @@ export default function HelpSupportScreen({ onBack, onNavigate }: { onBack: () =
       <div className="p-6 space-y-8">
         {/* Quick Guides */}
         <section>
-          <h2 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em] mb-4 ml-1">Quick Guides</h2>
+          <h2 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em] mb-4 ml-1">{t('quick_guides')}</h2>
           <div className="grid grid-cols-2 gap-4">
             <button 
               onClick={() => setActiveGuide('getting-started')}
@@ -142,8 +154,8 @@ export default function HelpSupportScreen({ onBack, onNavigate }: { onBack: () =
               <div className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center text-emerald-600 shadow-sm mb-3">
                 <Zap size={20} />
               </div>
-              <h3 className="font-bold text-emerald-900 text-sm mb-1">Getting Started</h3>
-              <p className="text-[10px] text-emerald-900/80 font-medium leading-tight">Learn the basics of garden tracking.</p>
+              <h3 className="font-bold text-emerald-900 text-sm mb-1">{t('getting_started_title')}</h3>
+              <p className="text-[10px] text-emerald-900/80 font-medium leading-tight">{t('getting_started_desc')}</p>
             </button>
             <button 
               onClick={() => setActiveGuide('plant-safety')}
@@ -152,15 +164,15 @@ export default function HelpSupportScreen({ onBack, onNavigate }: { onBack: () =
               <div className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center text-blue-600 shadow-sm mb-3">
                 <Shield size={20} />
               </div>
-              <h3 className="font-bold text-blue-900 text-sm mb-1">Plant Safety</h3>
-              <p className="text-[10px] text-blue-900/80 font-medium leading-tight">How to protect your plants from pests.</p>
+              <h3 className="font-bold text-blue-900 text-sm mb-1">{t('plant_safety_title')}</h3>
+              <p className="text-[10px] text-blue-900/80 font-medium leading-tight">{t('plant_safety_desc')}</p>
             </button>
           </div>
         </section>
 
         {/* FAQs */}
         <section>
-          <h2 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em] mb-2 ml-1">Frequently Asked Questions</h2>
+          <h2 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em] mb-2 ml-1">{t('faq_title')}</h2>
           <div className="bg-white rounded-3xl border border-zinc-100 px-5 shadow-sm">
             {faqs.map((faq, idx) => (
               <FAQItem key={idx} question={faq.question} answer={faq.answer} />
@@ -170,7 +182,7 @@ export default function HelpSupportScreen({ onBack, onNavigate }: { onBack: () =
 
         {/* Contact Support */}
         <section>
-          <h2 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em] mb-4 ml-1">Contact Support</h2>
+          <h2 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em] mb-4 ml-1">{t('contact_support')}</h2>
           <div className="space-y-3">
             <button 
               onClick={() => setIsLiveChatOpen(true)}
@@ -181,28 +193,13 @@ export default function HelpSupportScreen({ onBack, onNavigate }: { onBack: () =
                   <MessageSquare size={20} />
                 </div>
                 <div>
-                  <h4 className="font-bold text-zinc-800 text-sm">Live Chat</h4>
-                  <p className="text-[10px] text-zinc-700 font-medium">Chat with Support AI</p>
+                  <h4 className="font-bold text-zinc-800 text-sm">{t('live_chat')}</h4>
+                  <p className="text-[10px] text-zinc-700 font-medium">{t('live_chat_desc')}</p>
                 </div>
               </div>
               <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
             </button>
           </div>
-        </section>
-
-        {/* Community Links */}
-        <section className="bg-zinc-900 rounded-[2.5rem] p-8 text-white relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-6 opacity-10">
-            <HelpCircle size={80} />
-          </div>
-          <h3 className="text-xl font-bold mb-2 relative z-10">Still need help?</h3>
-          <p className="text-sm text-zinc-600 mb-6 relative z-10">Join our community of 50,000+ gardeners and get advice from experts.</p>
-          <button 
-            onClick={() => onNavigate('community')}
-            className="w-full py-4 bg-emerald-500 text-white font-bold rounded-2xl shadow-lg shadow-emerald-500/20 active:scale-95 transition-all relative z-10"
-          >
-            Join Community
-          </button>
         </section>
       </div>
 
@@ -249,7 +246,7 @@ export default function HelpSupportScreen({ onBack, onNavigate }: { onBack: () =
                   onClick={() => setActiveGuide(null)}
                   className="w-full py-4 bg-zinc-900 text-white font-bold rounded-2xl mt-4 active:scale-95 transition-all"
                 >
-                  Got it!
+                  {t('got_it')}
                 </button>
               </div>
             </motion.div>
@@ -278,8 +275,8 @@ export default function HelpSupportScreen({ onBack, onNavigate }: { onBack: () =
                     <MessageSquare size={20} />
                   </div>
                   <div>
-                    <h3 className="font-bold">Support AI</h3>
-                    <p className="text-[10px] opacity-80">Always active</p>
+                    <h3 className="font-bold">{t('support_ai')}</h3>
+                    <p className="text-[10px] opacity-80">{t('always_active')}</p>
                   </div>
                 </div>
                 <button onClick={() => setIsLiveChatOpen(false)} className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors">
@@ -289,12 +286,24 @@ export default function HelpSupportScreen({ onBack, onNavigate }: { onBack: () =
 
               <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-zinc-50">
                 {chatMessages.map((msg, idx) => (
-                  <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div key={idx} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
                     <div className={`max-w-[80%] p-4 rounded-3xl text-sm ${msg.role === 'user' ? 'bg-emerald-600 text-white rounded-tr-none' : 'bg-white text-zinc-800 border border-zinc-100 rounded-tl-none shadow-sm'}`}>
                       <div className="markdown-body">
                         <Markdown>{msg.text}</Markdown>
                       </div>
                     </div>
+                    {msg.showAIButton && (
+                      <button 
+                        onClick={() => {
+                          setIsLiveChatOpen(false);
+                          onAskAI(chatMessages[idx-1]?.text || "");
+                        }}
+                        className="mt-2 flex items-center gap-2 px-4 py-2 bg-emerald-100 text-emerald-700 rounded-xl text-xs font-bold hover:bg-emerald-200 transition-colors"
+                      >
+                        <Sparkles size={14} />
+                        {t('open_ai_assistance')}
+                      </button>
+                    )}
                   </div>
                 ))}
                 {isTyping && (
@@ -315,7 +324,7 @@ export default function HelpSupportScreen({ onBack, onNavigate }: { onBack: () =
                   type="text"
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
-                  placeholder="Type your message..."
+                  placeholder={t('type_message')}
                   className="flex-1 bg-zinc-50 border border-zinc-100 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 transition-all"
                 />
                 <button 

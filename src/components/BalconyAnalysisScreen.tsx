@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useApp } from '../AppContext';
 import { GoogleGenAI, Type } from "@google/genai";
 import { getAIErrorKey } from '../services/geminiService';
+import { resizeImage } from '../lib/utils';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
@@ -58,7 +59,7 @@ export default function BalconyAnalysisScreen() {
     setIsLiveCamera(false);
   };
 
-  const capturePhoto = () => {
+  const capturePhoto = async () => {
     if (videoRef.current && canvasRef.current) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
@@ -68,7 +69,8 @@ export default function BalconyAnalysisScreen() {
       if (ctx) {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         const dataUrl = canvas.toDataURL('image/jpeg');
-        setImage(dataUrl);
+        const resized = await resizeImage(dataUrl);
+        setImage(resized);
         stopCamera();
       }
     }
@@ -78,8 +80,9 @@ export default function BalconyAnalysisScreen() {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setImage(reader.result as string);
+      reader.onloadend = async () => {
+        const resized = await resizeImage(reader.result as string);
+        setImage(resized);
       };
       reader.readAsDataURL(file);
     }
@@ -170,28 +173,28 @@ export default function BalconyAnalysisScreen() {
   };
 
   return (
-    <div className="p-6 pb-24">
+    <div className="min-h-screen p-6 pb-32">
       <header className="mb-8">
         <h1 className="text-3xl font-black text-zinc-900 leading-tight whitespace-nowrap">{t('balcony_planner_title')}</h1>
-        <p className="text-zinc-700 text-sm mt-2">{t('balcony_planner_subtitle')}</p>
+        <p className="text-zinc-950 text-sm mt-2">{t('balcony_planner_subtitle')}</p>
       </header>
 
       <div className="space-y-6">
         {/* Image Upload Section */}
         <section>
-          <h2 className="text-xs font-bold text-zinc-700 uppercase tracking-widest mb-3">{t('balcony_photo_step')}</h2>
+          <h2 className="text-xs font-bold text-zinc-950 uppercase tracking-widest mb-3">{t('balcony_photo_step')}</h2>
           
           <div className="grid grid-cols-2 gap-3 mb-4">
             <button 
               onClick={startCamera}
-              className={`p-4 rounded-2xl border-2 flex flex-col items-center gap-2 transition-all ${isLiveCamera ? 'bg-emerald-50 border-emerald-500 text-emerald-600' : 'bg-white border-zinc-100 text-zinc-600 hover:border-zinc-200'}`}
+              className={`p-4 rounded-2xl border-2 flex flex-col items-center gap-2 transition-all ${isLiveCamera ? 'bg-emerald-50 border-emerald-500 text-emerald-600' : 'bg-white border-zinc-100 text-zinc-900 hover:border-zinc-200'}`}
             >
               <Camera size={24} />
               <span className="text-[10px] font-bold uppercase">{t('camera_btn')}</span>
             </button>
             <button 
               onClick={() => fileInputRef.current?.click()}
-              className="p-4 rounded-2xl border-2 bg-white border-zinc-100 text-zinc-600 hover:border-zinc-200 flex flex-col items-center gap-2 transition-all"
+              className="p-4 rounded-2xl border-2 bg-white border-zinc-100 text-zinc-900 hover:border-zinc-200 flex flex-col items-center gap-2 transition-all"
             >
               <Upload size={24} />
               <span className="text-[10px] font-bold uppercase">{t('gallery_btn')}</span>
@@ -243,8 +246,8 @@ export default function BalconyAnalysisScreen() {
                 <div className="w-12 h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center text-zinc-400 mx-auto mb-3">
                   <Camera size={24} />
                 </div>
-                <p className="text-xs font-bold text-zinc-500">{t('capture_upload_prompt')}</p>
-                <p className="text-[10px] text-zinc-400 mt-1">{t('ai_needs_view')}</p>
+                <p className="text-xs font-bold text-zinc-900">{t('capture_upload_prompt')}</p>
+                <p className="text-[10px] text-zinc-800 mt-1">{t('ai_needs_view')}</p>
               </div>
             )}
             <canvas ref={canvasRef} className="hidden" />
@@ -268,27 +271,27 @@ export default function BalconyAnalysisScreen() {
 
         {/* Plant Input Section */}
         <section>
-          <h2 className="text-xs font-bold text-zinc-700 uppercase tracking-widest mb-3">{t('plants_grow_step')}</h2>
+          <h2 className="text-xs font-bold text-zinc-950 uppercase tracking-widest mb-3">{t('plants_grow_step')}</h2>
           <div className="relative">
             <input
               type="text"
               value={plantInput}
               onChange={(e) => setPlantInput(e.target.value)}
               placeholder={t('plants_placeholder')}
-              className="w-full bg-white border border-zinc-100 rounded-2xl px-5 py-4 text-sm font-medium focus:outline-none focus:border-emerald-500 transition-all shadow-sm"
+              className="w-full bg-white border border-zinc-100 rounded-2xl px-5 py-4 text-sm font-medium text-zinc-900 focus:outline-none focus:border-emerald-500 transition-all shadow-sm"
             />
             <div className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-300">
               <Leaf size={18} />
             </div>
           </div>
-          <p className="text-[10px] text-zinc-600 mt-2 ml-1 italic">{t('separate_commas')}</p>
+          <p className="text-[10px] text-zinc-900 mt-2 ml-1 italic">{t('separate_commas')}</p>
         </section>
 
         {/* Optional Balcony Details Section */}
         <section>
           <div className="flex justify-between items-center mb-3">
-            <h2 className="text-xs font-bold text-zinc-700 uppercase tracking-widest">{t('balcony_details_step')}</h2>
-            <span className="text-[10px] font-bold text-zinc-300 uppercase tracking-widest">{t('optional')}</span>
+            <h2 className="text-xs font-bold text-zinc-950 uppercase tracking-widest">{t('balcony_details_step')}</h2>
+            <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">{t('optional')}</span>
           </div>
           <div className="relative">
             <textarea
@@ -296,10 +299,10 @@ export default function BalconyAnalysisScreen() {
               onChange={(e) => setBalconyDetails(e.target.value)}
               placeholder={t('details_placeholder')}
               rows={3}
-              className="w-full bg-white border border-zinc-100 rounded-2xl px-5 py-4 text-sm font-medium focus:outline-none focus:border-emerald-500 transition-all shadow-sm resize-none"
+              className="w-full bg-white border border-zinc-100 rounded-2xl px-5 py-4 text-sm font-medium text-zinc-900 focus:outline-none focus:border-emerald-500 transition-all shadow-sm resize-none"
             />
           </div>
-          <p className="text-[10px] text-zinc-600 mt-2 ml-1 italic">{t('provide_details_advice')}</p>
+          <p className="text-[10px] text-zinc-900 mt-2 ml-1 italic">{t('provide_details_advice')}</p>
         </section>
 
         {/* Action Button */}

@@ -49,7 +49,7 @@ export default function TrackerScreen({ onBack }: { onBack: () => void }) {
   };
 
   return (
-    <div className="pb-24 px-5 pt-6">
+    <div className="min-h-screen pb-32 px-5 pt-6">
       <header className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-4">
           <button 
@@ -60,7 +60,7 @@ export default function TrackerScreen({ onBack }: { onBack: () => void }) {
           </button>
           <div>
             <h1 className="text-xl font-bold text-emerald-950 tracking-tight">{t('expenses_tracker')}</h1>
-            <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Financial Analysis</p>
+            <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">{t('financial_analysis')}</p>
           </div>
         </div>
         <button 
@@ -78,7 +78,7 @@ export default function TrackerScreen({ onBack }: { onBack: () => void }) {
         </div>
         <div className="relative z-10">
           <div className="mb-2">
-            <p className="text-emerald-500/60 text-[9px] font-black uppercase tracking-widest mb-1">Investment</p>
+            <p className="text-emerald-500/60 text-[9px] font-black uppercase tracking-widest mb-1">{t('investment')}</p>
             <h2 className="text-3xl font-black">₹{stats.total.toFixed(2)}</h2>
           </div>
         </div>
@@ -95,50 +95,50 @@ export default function TrackerScreen({ onBack }: { onBack: () => void }) {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1 block">Category</label>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1 block">{t('category')}</label>
                   <select 
                     value={newExpense.category}
                     onChange={e => setNewExpense(prev => ({ ...prev, category: e.target.value }))}
-                    className="w-full bg-zinc-50 border-2 border-zinc-100 rounded-xl px-4 py-2 focus:border-zinc-900 outline-none transition-colors"
+                    className="w-full bg-zinc-50 border-2 border-zinc-100 rounded-xl px-4 py-2 text-zinc-900 focus:border-zinc-900 outline-none transition-colors"
                   >
-                    <option value="seeds">Seeds</option>
-                    <option value="soil">Soil</option>
-                    <option value="fertilizer">Fertilizer</option>
-                    <option value="water">Water</option>
-                    <option value="tools">Tools</option>
-                    <option value="other">Other</option>
+                    <option value="seeds">{t('seeds')}</option>
+                    <option value="soil">{t('soil')}</option>
+                    <option value="fertilizer">{t('fertilizer')}</option>
+                    <option value="water">{t('water')}</option>
+                    <option value="tools">{t('tools')}</option>
+                    <option value="other">{t('other')}</option>
                   </select>
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1 block">Amount (₹)</label>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1 block">{t('amount_inr')}</label>
                   <input 
                     required
                     type="number"
                     step="0.01"
                     value={newExpense.amount}
                     onChange={e => setNewExpense(prev => ({ ...prev, amount: e.target.value }))}
-                    className="w-full bg-zinc-50 border-2 border-zinc-100 rounded-xl px-4 py-2 focus:border-zinc-900 outline-none transition-colors"
+                    className="w-full bg-zinc-50 border-2 border-zinc-100 rounded-xl px-4 py-2 text-zinc-900 focus:border-zinc-900 outline-none transition-colors"
                     placeholder="0.00"
                   />
                 </div>
               </div>
               <div>
-                <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1 block">Description</label>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1 block">{t('description_label')}</label>
                 <input 
                   required
                   value={newExpense.description}
                   onChange={e => setNewExpense(prev => ({ ...prev, description: e.target.value }))}
-                  className="w-full bg-zinc-50 border-2 border-zinc-100 rounded-xl px-4 py-2 focus:border-zinc-900 outline-none transition-colors"
-                  placeholder="What did you buy?"
+                  className="w-full bg-zinc-50 border-2 border-zinc-100 rounded-xl px-4 py-2 text-zinc-900 focus:border-zinc-900 outline-none transition-colors"
+                  placeholder={t('what_did_you_buy_placeholder')}
                 />
               </div>
               <div>
-                <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1 block">Date</label>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1 block">{t('date_label')}</label>
                 <input 
                   type="date"
                   value={newExpense.date}
                   onChange={e => setNewExpense(prev => ({ ...prev, date: e.target.value }))}
-                  className="w-full bg-zinc-50 border-2 border-zinc-100 rounded-xl px-4 py-2 focus:border-zinc-900 outline-none transition-colors"
+                  className="w-full bg-zinc-50 border-2 border-zinc-100 rounded-xl px-4 py-2 text-zinc-900 focus:border-zinc-900 outline-none transition-colors"
                 />
               </div>
               <div className="flex gap-3 pt-2">
@@ -146,14 +146,14 @@ export default function TrackerScreen({ onBack }: { onBack: () => void }) {
                   type="submit"
                   className="flex-1 bg-zinc-900 text-white font-bold py-3 rounded-xl hover:bg-zinc-800 transition-colors"
                 >
-                  Log Expense
+                  {t('log_expense_btn')}
                 </button>
                 <button 
                   type="button"
                   onClick={() => setIsAdding(false)}
                   className="px-6 bg-zinc-100 text-zinc-600 font-bold py-3 rounded-xl hover:bg-zinc-200 transition-colors"
                 >
-                  Cancel
+                  {t('cancel_btn')}
                 </button>
               </div>
             </form>
@@ -162,7 +162,7 @@ export default function TrackerScreen({ onBack }: { onBack: () => void }) {
       </AnimatePresence>
 
       <div className="space-y-3">
-        <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-4">Recent Transactions</h3>
+        <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-4">{t('recent_transactions_header')}</h3>
         {expenses.map((expense) => (
           <motion.div 
             key={expense.id}
@@ -176,7 +176,7 @@ export default function TrackerScreen({ onBack }: { onBack: () => void }) {
               <div>
                 <h4 className="font-bold text-zinc-900">{expense.description}</h4>
                 <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">
-                  {expense.category} • {new Date(expense.date).toLocaleDateString()}
+                  {t(expense.category)} • {new Date(expense.date).toLocaleDateString()}
                 </p>
               </div>
             </div>
@@ -195,7 +195,7 @@ export default function TrackerScreen({ onBack }: { onBack: () => void }) {
         {expenses.length === 0 && (
           <div className="text-center py-12 bg-zinc-50 rounded-3xl border-2 border-dashed border-zinc-200">
             <DollarSign className="mx-auto text-zinc-300 mb-2" size={32} />
-            <p className="text-zinc-500 text-sm font-medium">No expenses logged yet.</p>
+            <p className="text-zinc-500 text-sm font-medium">{t('no_expenses_logged_msg')}</p>
           </div>
         )}
       </div>

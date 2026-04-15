@@ -1,5 +1,6 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, ThinkingLevel } from "@google/genai";
 import { PlantAnalysisResult } from "../types";
+import { getLanguageName } from "../lib/utils";
 
 export function getAIErrorKey(error: any): string {
   const msg = (error?.message || String(error)).toLowerCase();
@@ -40,14 +41,16 @@ export async function analyzePlantDisease(
          - Light Level: ${Math.round(sensorData.light)}%`
       : "";
 
+    const targetLanguage = getLanguageName(language);
+    
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.0-flash",
       contents: [
         {
           parts: [
             { text: `You are a highly advanced botanical diagnostic system specializing in Indian agriculture and urban gardening. Analyze this plant image and the provided environmental data with absolute precision.
             
-            IMPORTANT: You MUST provide the entire response in the following language: ${language}.
+            IMPORTANT: You MUST provide the entire response in the following language: ${targetLanguage}.
             
             1. Identify the exact plant species and provide a definitive health status.
             2. Identify any pests (e.g., aphids, spider mites) or beneficial insects (e.g., ladybugs, lacewings) present with certainty.
@@ -59,7 +62,7 @@ export async function analyzePlantDisease(
             8. If pests are found, provide specific, proven organic/non-toxic remedies common in India (e.g., Neem oil, soap water, wood ash).
             9. Provide a step-by-step action checklist for the user to follow.
             
-            CRITICAL: You MUST provide ALL text fields (plantName, status, description, symptoms, treatment, detailedAnalysis, fertilizerSuggestion, soilAdvice, suggestions, checklist) in the following language: ${language}.
+            CRITICAL: You MUST provide ALL text fields (plantName, status, description, symptoms, treatment, detailedAnalysis, fertilizerSuggestion, soilAdvice, suggestions, checklist) in the following language: ${targetLanguage}.
             
             Avoid using hedging language like "it appears", "possibly", "likely", or "I think". State your findings as confirmed facts.
             ${sensorContext}` },
@@ -154,11 +157,12 @@ export async function getGrowthSuggestions(plantName: string, daysPlanted: numbe
   harvestDays: number;
 }> {
   try {
+    const targetLanguage = getLanguageName(language);
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.0-flash",
       contents: `You are a professional Indian horticulturist with decades of experience in both traditional and urban farming. Provide an extremely deep, expert-level growth analysis and advice for ${plantName} which was planted ${daysPlanted} days ago. 
       
-      IMPORTANT: You MUST provide the entire response in the following language: ${language}.
+      IMPORTANT: You MUST provide the entire response in the following language: ${targetLanguage}.
       
       1. Analyze its current growth stage (seedling, vegetative, flowering, etc.) based on the age. Explain the physiological changes happening in the plant right now.
       2. Provide specific fertilizer recommendations. Mention exact types (e.g., NPK 19:19:19, Vermicompost, Mustard cake, Bone meal, Seaweed extract) and precise dosage/frequency suitable for this age in the Indian climate. Explain WHY these nutrients are needed now.
@@ -228,14 +232,16 @@ export async function analyzeGrowthFromImage(
     const mimeType = matches[1];
     const data = matches[2];
 
+    const targetLanguage = getLanguageName(language);
+
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.0-flash",
       contents: [
         {
           parts: [
             { text: `You are a professional Indian horticulturist. Analyze this image of a ${plantName || 'plant'} and provide a detailed growth assessment suitable for Indian urban gardening.
             
-            IMPORTANT: You MUST provide the entire response in the following language: ${language}.
+            IMPORTANT: You MUST provide the entire response in the following language: ${targetLanguage}.
             
             1. Identify the plant species (if not provided).
             2. Determine the current growth stage (e.g., Seedling, Vegetative, Flowering, Fruiting).

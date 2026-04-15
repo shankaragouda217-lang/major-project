@@ -122,7 +122,7 @@ export default function AuthScreen({ onBack }: { onBack: () => void }) {
             placeholder={t('auth_email')}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full bg-white border border-zinc-200 rounded-2xl py-4 pl-12 pr-4 focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+            className="w-full bg-white border border-zinc-200 rounded-2xl py-4 pl-12 pr-4 text-zinc-900 focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
             required
           />
         </div>
@@ -135,7 +135,7 @@ export default function AuthScreen({ onBack }: { onBack: () => void }) {
               placeholder={t('auth_password')}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-white border border-zinc-200 rounded-2xl py-4 pl-12 pr-12 focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+              className="w-full bg-white border border-zinc-200 rounded-2xl py-4 pl-12 pr-12 text-zinc-900 focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
               required
             />
             <button

@@ -28,7 +28,7 @@ function AppContent() {
 
   if (loading || !isAuthReady) {
     return (
-      <div className="min-h-screen bg-emerald-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-600"></div>
       </div>
     );
@@ -50,7 +50,7 @@ function AppContent() {
       case 'community': return <CommunityScreen />;
       case 'tracker': return <TrackerScreen onBack={() => setCurrentScreen('dashboard')} />;
       case 'settings': return <SettingsScreen onNavigate={setCurrentScreen} />;
-      case 'help': return <HelpSupportScreen onBack={() => setCurrentScreen('settings')} onNavigate={setCurrentScreen} />;
+      case 'help': return <HelpSupportScreen onBack={() => setCurrentScreen('settings')} onNavigate={setCurrentScreen} onAskAI={handleAskAI} />;
       case 'chat': return <ChatScreen initialQuery={chatQuery} onBack={() => setCurrentScreen('dashboard')} />;
       default: return <DashboardScreen onNavigate={setCurrentScreen} onAskAI={handleAskAI} />;
     }
@@ -64,19 +64,8 @@ function AppContent() {
   };
 
   return (
-    <div className={`min-h-screen w-full relative ${userData?.settings?.darkMode ? 'dark bg-zinc-950 text-white' : 'bg-emerald-50 text-zinc-900'} font-sans transition-colors duration-300`}>
-      {/* Global Background Image Layer */}
-      <div 
-        className="fixed inset-0 z-0 opacity-10 pointer-events-none"
-        style={{ 
-          backgroundImage: `url('https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?auto=format&fit=crop&q=80&w=2000')`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          filter: 'saturate(0.5) blur(2px)'
-        }}
-      />
-
-      <div className={`relative z-10 max-w-md mx-auto ${currentScreen === 'chat' ? '' : 'pb-32'}`}>
+    <div className={`min-h-screen w-full relative ${userData?.settings?.darkMode ? 'dark bg-zinc-950' : 'bg-gradient-to-br from-emerald-50 to-green-50'} text-zinc-900 dark:text-white font-sans transition-colors duration-300`}>
+      <div className={`relative z-10 max-w-md mx-auto ${currentScreen === 'chat' ? '' : ''}`}>
         <AnimatePresence mode="wait">
           <motion.div
             key={currentScreen}

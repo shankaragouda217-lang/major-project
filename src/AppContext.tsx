@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useRef, useCallback } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc, getDocs, onSnapshot, collection, query, orderBy, limit, addDoc, deleteDoc, serverTimestamp, getDocFromServer, writeBatch } from 'firebase/firestore';
 import { auth, db } from './firebase';
@@ -6,6 +6,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 
 import { translations } from './translations';
 import { getAIErrorKey } from './services/geminiService';
+import { getLanguageName } from './lib/utils';
 
 enum OperationType {
   CREATE = 'create',
@@ -105,6 +106,7 @@ interface AppContextType {
   addToHistory: (item: any) => Promise<void>;
   deleteHistoryItem: (id: string) => Promise<void>;
   deleteMultipleHistoryItems: (ids: string[]) => Promise<void>;
+  deleteMultipleReports: (ids: string[]) => Promise<void>;
   addPost: (post: any) => Promise<void>;
   deletePost: (id: string) => Promise<void>;
   addExpense: (expense: any) => Promise<void>;
@@ -115,100 +117,104 @@ interface AppContextType {
   notificationPermission: NotificationPermission;
   healthScore: number;
   healthStatus: { label: string; color: string; explanation: string };
-  smartSummary: { watering: string; disease: string; sunlight: string; actions: string[] };
+  smartSummary: { watering: string; sunlight: string; actions: string[] };
   submitFeedback: (analysisId: string, worked: boolean) => Promise<void>;
+  inAppNotifications: { id: string; title: string; body: string; timestamp: number; read: boolean }[];
+  addInAppNotification: (title: string, body: string) => void;
+  markNotificationsAsRead: () => void;
+  clearNotifications: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 const PLANT_DATABASE = [
   { 
-    name: 'Curry Leaves', 
+    name: 'curry_leaves', 
     minTemp: 15, maxTemp: 40, minHumidity: 40, light: 'high', 
-    description: 'Essential Indian herb, loves warm tropical climates.',
-    growthTime: '1-2 years to establish',
-    needs: 'Full sun, well-drained soil, and regular pruning.',
-    suitableMonths: 'Year-round (best in Summer/Monsoon)'
+    description: 'curry_leaves_desc',
+    growthTime: 'curry_leaves_growth',
+    needs: 'curry_leaves_needs',
+    suitableMonths: 'curry_leaves_months'
   },
   { 
-    name: 'Chilli', 
+    name: 'chilli', 
     minTemp: 20, maxTemp: 35, minHumidity: 40, light: 'high', 
-    description: 'Thrives in the Indian heat, perfect for balconies.',
-    growthTime: '60-80 days',
-    needs: 'Full sun, moderate watering, and organic compost.',
-    suitableMonths: 'Jan-Feb or June-July'
+    description: 'chilli_desc',
+    growthTime: 'chilli_growth',
+    needs: 'chilli_needs',
+    suitableMonths: 'chilli_months'
   },
   { 
-    name: 'Okra (Bhindi)', 
+    name: 'bhindi', 
     minTemp: 22, maxTemp: 40, minHumidity: 50, light: 'high', 
-    description: 'Heat-loving vegetable, very productive in Indian summers.',
-    growthTime: '50-60 days',
-    needs: 'Full sun, deep watering, and space to grow.',
-    suitableMonths: 'Feb-April or June-July'
+    description: 'bhindi_desc',
+    growthTime: 'bhindi_growth',
+    needs: 'bhindi_needs',
+    suitableMonths: 'bhindi_months'
   },
   { 
-    name: 'Marigold (Genda)', 
+    name: 'marigold', 
     minTemp: 15, maxTemp: 35, minHumidity: 30, light: 'high', 
-    description: 'Traditional Indian flower, great for pest control.',
-    growthTime: '45-60 days',
-    needs: 'Full sun, well-drained soil, and deadheading.',
-    suitableMonths: 'Year-round (best in Winter)'
+    description: 'marigold_desc',
+    growthTime: 'marigold_growth',
+    needs: 'marigold_needs',
+    suitableMonths: 'marigold_months'
   },
   { 
-    name: 'Brinjal (Baingan)', 
+    name: 'brinjal', 
     minTemp: 20, maxTemp: 35, minHumidity: 50, light: 'high', 
-    description: 'Versatile vegetable, loves the tropical sun.',
-    growthTime: '70-90 days',
-    needs: 'Full sun, consistent moisture, and staking.',
-    suitableMonths: 'Jan-Feb or June-July'
+    description: 'brinjal_desc',
+    growthTime: 'brinjal_growth',
+    needs: 'brinjal_needs',
+    suitableMonths: 'brinjal_months'
   },
   { 
-    name: 'Papaya', 
+    name: 'papaya', 
     minTemp: 20, maxTemp: 35, minHumidity: 50, light: 'high', 
-    description: 'Tropical fruit that loves heat and humidity.',
-    growthTime: '6-9 months to fruit',
-    needs: 'Full sun, well-draining soil, and regular watering.',
-    suitableMonths: 'Year-round in tropics'
+    description: 'papaya_desc',
+    growthTime: 'papaya_growth',
+    needs: 'papaya_needs',
+    suitableMonths: 'papaya_months'
   },
   { 
-    name: 'Tomato', 
+    name: 'tomato', 
     minTemp: 18, maxTemp: 32, minHumidity: 40, light: 'high', 
-    description: 'Thrives in warm, sunny weather.',
-    growthTime: '60-80 days',
-    needs: 'Full sun (6-8 hours), consistent watering, and nutrient-rich soil.',
-    suitableMonths: 'Oct-Nov or Feb-March'
+    description: 'tomato_desc',
+    growthTime: 'tomato_growth',
+    needs: 'tomato_needs',
+    suitableMonths: 'tomato_months'
   },
   { 
-    name: 'Tulsi (Holy Basil)', 
+    name: 'tulsi', 
     minTemp: 15, maxTemp: 40, minHumidity: 30, light: 'high', 
-    description: 'Sacred Indian plant with medicinal properties.',
-    growthTime: '40-60 days',
-    needs: 'Bright light, regular watering, and pinching tips.',
-    suitableMonths: 'Year-round'
+    description: 'tulsi_desc',
+    growthTime: 'tulsi_growth',
+    needs: 'tulsi_needs',
+    suitableMonths: 'tulsi_months'
   },
   { 
-    name: 'Spinach (Palak)', 
+    name: 'palak', 
     minTemp: 10, maxTemp: 30, minHumidity: 40, light: 'medium', 
-    description: 'Nutritious leafy green, grows fast in Indian winters.',
-    growthTime: '35-50 days',
-    needs: 'Partial shade in summer, nitrogen-rich soil, and consistent moisture.',
-    suitableMonths: 'Sept-Oct or Feb-March'
+    description: 'palak_desc',
+    growthTime: 'palak_growth',
+    needs: 'palak_needs',
+    suitableMonths: 'palak_months'
   },
   { 
-    name: 'Aloe Vera', 
+    name: 'aloe_vera', 
     minTemp: 13, maxTemp: 45, minHumidity: 10, light: 'high', 
-    description: 'Medicinal plant that thrives in dry Indian air.',
-    growthTime: '3-4 years to maturity',
-    needs: 'Bright indirect light, infrequent deep watering, and well-draining soil.',
-    suitableMonths: 'Year-round'
+    description: 'aloe_vera_desc',
+    growthTime: 'aloe_vera_growth',
+    needs: 'aloe_vera_needs',
+    suitableMonths: 'aloe_vera_months'
   },
   { 
-    name: 'Money Plant', 
+    name: 'money_plant', 
     minTemp: 15, maxTemp: 35, minHumidity: 40, light: 'low', 
-    description: 'Popular Indian indoor plant, very easy to grow.',
-    growthTime: 'Fast growing',
-    needs: 'Indirect light, can grow in water or soil.',
-    suitableMonths: 'Year-round'
+    description: 'money_plant_desc',
+    growthTime: 'money_plant_growth',
+    needs: 'money_plant_needs',
+    suitableMonths: 'money_plant_months'
   }
 ];
 
@@ -234,6 +240,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       humidity: 60,
       light: 80,
       condition: 'Sunny',
+      isDay: true,
       weatherCode: 0,
       lastUpdated: null
     };
@@ -246,7 +253,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [allPlants, setAllPlants] = useState<any[]>([]);
   const [isLocationEnabled, setIsLocationEnabled] = useState(false);
+  const [locationWatchId, setLocationWatchId] = useState<number | null>(null);
+  const lastCoords = useRef<{ lat: number, lon: number } | null>(null);
   const [cityName, setCityName] = useState<string | null>(null);
+  const [isIPLocation, setIsIPLocation] = useState(false);
   const [weatherIntervalId, setWeatherIntervalId] = useState<NodeJS.Timeout | null>(null);
   const [posts, setPosts] = useState<any[]>([]);
   const [expenses, setExpenses] = useState<any[]>([]);
@@ -258,10 +268,44 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [healthStatus, setHealthStatus] = useState({ label: 'Good', color: 'text-emerald-500', explanation: 'Your plants are thriving in current conditions.' });
   const [smartSummary, setSmartSummary] = useState({ 
     watering: 'Optimal', 
-    disease: 'Low Risk', 
     sunlight: 'Good', 
     actions: ['Check soil moisture in the evening'] 
   });
+  const [inAppNotifications, setInAppNotifications] = useState<{ id: string; title: string; body: string; timestamp: number; read: boolean }[]>(() => {
+    const saved = localStorage.getItem('inAppNotifications');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        return [];
+      }
+    }
+    return [];
+  });
+
+  // Persist notifications to localStorage
+  useEffect(() => {
+    localStorage.setItem('inAppNotifications', JSON.stringify(inAppNotifications));
+  }, [inAppNotifications]);
+
+  const addInAppNotification = (title: string, body: string) => {
+    const newNotif = {
+      id: Math.random().toString(36).substr(2, 9),
+      title,
+      body,
+      timestamp: Date.now(),
+      read: false
+    };
+    setInAppNotifications(prev => [newNotif, ...prev].slice(0, 20)); // Keep last 20
+  };
+
+  const markNotificationsAsRead = () => {
+    setInAppNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  };
+
+  const clearNotifications = () => {
+    setInAppNotifications([]);
+  };
 
   useEffect(() => {
     if ('Notification' in window) {
@@ -278,7 +322,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return 'denied';
   };
 
-  const t = (key: string, params?: Record<string, string | number>) => {
+  const t = useCallback((key: string, params?: Record<string, string | number>) => {
     let text = translations[currentLanguage]?.[key] || translations['en']?.[key] || key;
     if (params) {
       Object.entries(params).forEach(([k, v]) => {
@@ -286,7 +330,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       });
     }
     return text;
-  };
+  }, [currentLanguage]);
 
   const waterPlant = async () => {
     const now = Date.now();
@@ -344,90 +388,180 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Fetch real weather data
-  const fetchWeatherData = async (lat: number, lon: number) => {
+  const fetchWeatherData = useCallback(async (lat: number, lon: number, isFallback = false) => {
     try {
-      console.log(`Fetching weather for: ${lat}, ${lon}`);
-      // Fetch weather
-      const weatherPromise = fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,precipitation_probability,relative_humidity_2m,cloud_cover,is_day,weather_code`
-      ).then(res => res.json());
-
-      // Fetch city name (Reverse Geocoding using OpenStreetMap Nominatim)
-      // Increased zoom to 18 for even more precise neighborhood data
-      const geoPromise = fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1&accept-language=${currentLanguage}`
-      ).then(res => res.json());
-
-      const [weatherData, geoData] = await Promise.all([weatherPromise, geoPromise]);
+      console.log(`Fetching weather for: ${lat}, ${lon} (Fallback: ${isFallback})`);
       
-      if (weatherData.current) {
-        const code = weatherData.current.weather_code;
-        const isDay = weatherData.current.is_day;
-        const precip = weatherData.current.precipitation_probability || 0;
-        let condition = isDay ? 'Sunny' : 'Clear';
+      // Fetch weather independently
+      try {
+        const weatherRes = await fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,precipitation_probability,relative_humidity_2m,cloud_cover,is_day,weather_code`
+        );
+        if (!weatherRes.ok) throw new Error(`Weather API error: ${weatherRes.status}`);
+        const weatherData = await weatherRes.json();
         
-        // Refined mapping based on Open-Meteo WMO codes
-        if (code >= 95) condition = 'Thunderstorm';
-        else if (code >= 80 || (code >= 60 && precip > 70)) condition = 'Rain Showers';
-        else if (code >= 71) condition = 'Snowy';
-        else if (code >= 61 || (code >= 50 && precip > 40)) condition = 'Rain';
-        else if (code >= 51 || precip > 20) condition = 'Drizzle';
-        else if (code >= 45) condition = 'Foggy';
-        else if (code >= 3) condition = 'Cloudy';
-        else if (code >= 2) condition = 'Partly Cloudy';
-        else if (code >= 1) condition = isDay ? 'Sunny' : 'Clear';
-        else condition = isDay ? 'Sunny' : 'Clear';
+        if (weatherData.current) {
+          const code = weatherData.current.weather_code;
+          const isDay = weatherData.current.is_day;
+          const precip = weatherData.current.precipitation_probability || 0;
+          let condition = isDay ? 'Sunny' : 'Clear';
+          
+          // Refined mapping based on Open-Meteo WMO codes
+          if (code >= 95) condition = 'Thunderstorm';
+          else if (code >= 80 || (code >= 60 && precip > 70)) condition = 'Rain Showers';
+          else if (code >= 71) condition = 'Snowy';
+          else if (code >= 61 || (code >= 50 && precip > 40)) condition = 'Rain';
+          else if (code >= 51 || precip > 20) condition = 'Drizzle';
+          else if (code >= 45) condition = 'Foggy';
+          else if (code >= 3) condition = 'Cloudy';
+          else if (code >= 2) condition = 'Partly Cloudy';
+          else if (code >= 1) condition = isDay ? 'Sunny' : 'Clear';
+          else condition = isDay ? 'Sunny' : 'Clear';
 
-        console.log(`Weather Data: Code=${code}, IsDay=${isDay}, Temp=${weatherData.current.temperature_2m}, Condition=${condition}, ApparentTemp=${weatherData.current.apparent_temperature}`);
+          console.log(`Weather Data: Code=${code}, IsDay=${isDay}, Temp=${weatherData.current.temperature_2m}, Condition=${condition}`);
 
-        setSensors(prev => {
-          const next = {
-            ...prev,
-            temp: weatherData.current.temperature_2m,
-            apparentTemp: weatherData.current.apparent_temperature,
-            humidity: weatherData.current.relative_humidity_2m,
-            light: weatherData.current.is_day ? Math.max(10, 100 - weatherData.current.cloud_cover) : 5,
-            condition,
-            weatherCode: code,
-            lastUpdated: new Date().toISOString()
-          };
-          localStorage.setItem('sensors', JSON.stringify(next));
-          return next;
-        });
+          setSensors(prev => {
+            const next = {
+              ...prev,
+              temp: weatherData.current.temperature_2m,
+              apparentTemp: weatherData.current.apparent_temperature,
+              humidity: weatherData.current.relative_humidity_2m,
+              light: weatherData.current.is_day ? Math.max(10, 100 - weatherData.current.cloud_cover) : 5,
+              condition,
+              isDay: !!weatherData.current.is_day,
+              weatherCode: code,
+              lastUpdated: new Date().toISOString()
+            };
+            localStorage.setItem('sensors', JSON.stringify(next));
+            return next;
+          });
+        }
+      } catch (weatherError) {
+        console.error("Weather fetch failed:", weatherError);
       }
 
-      if (geoData.address) {
-        const addr = geoData.address;
+      // Fetch city name independently
+      try {
+        // Try BigDataCloud first (often faster and more reliable for localities)
+        const bdcRes = await fetch(
+          `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=${currentLanguage}`
+        );
         
-        // Specific check for Govindaraja Nagar as requested by the user
-        const allFields = Object.values(addr).map(v => String(v).toLowerCase());
-        const hasGovindaraja = allFields.some(f => f.includes('govindaraja'));
-        
-        // More specific area detection - prioritize suburb and city_district
-        let area = addr.suburb || addr.city_district || addr.neighbourhood || addr.residential || addr.subdistrict || addr.quarter || addr.allotments || addr.commercial || addr.industrial || addr.hamlet;
-        
-        if (hasGovindaraja || (area && (area.toLowerCase().includes('thimmenahalli') || area.toLowerCase().includes('thimanahalli')))) {
-          area = t("govindaraja_nagar");
+        if (bdcRes.ok) {
+          const bdcData = await bdcRes.json();
+          if (bdcData.city || bdcData.locality || bdcData.principalSubdivision) {
+            let city = bdcData.city || bdcData.locality || bdcData.principalSubdivision;
+            let area = bdcData.locality || bdcData.neighborhood;
+            
+            // Specific check for Govindaraja Nagar
+            if (area && (area.toLowerCase().includes('govindaraja') || area.toLowerCase().includes('thimmenahalli'))) {
+              area = t("govindaraja_nagar");
+            }
+            
+            if (city.toLowerCase().includes('bagalkot')) city = t("bagalkot");
+            
+            const displayName = (area && area.toLowerCase() !== city.toLowerCase()) ? `${city} (${area})` : city;
+            console.log("Location detected (BDC):", displayName);
+            setCityName(displayName);
+            setIsIPLocation(isFallback);
+            return;
+          }
         }
-        
-        const city = addr.city || addr.town || addr.municipality || addr.city_district || addr.state_district || addr.village || "Unknown City";
-        
-        // Final fallback to ensure the user's specific request is met if we are in Bengaluru
-        if (city.toLowerCase().includes('bengaluru') && (!area || area.toLowerCase().includes('thimmenahalli'))) {
-          area = t("govindaraja_nagar");
+
+        // Fallback to Nominatim
+        const geoRes = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1&accept-language=${currentLanguage}`
+        );
+        if (!geoRes.ok) throw new Error(`Geo API error: ${geoRes.status}`);
+        const geoData = await geoRes.json();
+
+        if (geoData.address) {
+          const addr = geoData.address;
+          
+          // Specific check for Govindaraja Nagar as requested by the user
+          const allFields = Object.values(addr).map(v => String(v).toLowerCase());
+          const hasGovindaraja = allFields.some(f => f.includes('govindaraja'));
+          
+          // More specific area detection - prioritize suburb and city_district
+          let area = addr.suburb || addr.city_district || addr.neighbourhood || addr.residential || addr.subdistrict || addr.quarter || addr.allotments || addr.commercial || addr.industrial || addr.hamlet;
+          
+          if (hasGovindaraja || (area && (area.toLowerCase().includes('thimmenahalli') || area.toLowerCase().includes('thimanahalli')))) {
+            area = t("govindaraja_nagar");
+          }
+          
+          let city = addr.city || addr.town || addr.village || addr.municipality || addr.county || addr.state_district || t("unknown_city");
+          
+          if (city.toLowerCase().includes('bagalkot')) {
+            city = t("bagalkot");
+          }
+          
+          // Final fallback to ensure the user's specific request is met if we are in Bengaluru
+          if (city.toLowerCase().includes('bengaluru') && (!area || area.toLowerCase().includes('thimmenahalli'))) {
+            area = t("govindaraja_nagar");
+          }
+          
+          // Ensure we don't show "Bengaluru (Bengaluru)"
+          const cleanArea = (area && area.toLowerCase() !== city.toLowerCase()) ? area : null;
+          const displayName = cleanArea ? `${city} (${cleanArea})` : city;
+          
+          console.log("Location detected (Nominatim):", displayName);
+          setCityName(displayName);
+          setIsIPLocation(isFallback);
         }
-        
-        // Ensure we don't show "Bengaluru (Bengaluru)"
-        const cleanArea = (area && area.toLowerCase() !== city.toLowerCase()) ? area : null;
-        const displayName = cleanArea ? `${city} (${cleanArea})` : city;
-        
-        console.log("Location detected:", displayName, addr);
-        setCityName(displayName);
+      } catch (geoError) {
+        console.error("Geo fetch failed:", geoError);
+        // Fallback to coordinates if geocoding fails
+        setCityName(`${lat.toFixed(2)}, ${lon.toFixed(2)}`);
+        setIsIPLocation(isFallback);
       }
     } catch (error) {
-      console.error("Error fetching weather or location data:", error);
+      console.error("Error in fetchWeatherData outer block:", error);
     }
-  };
+  }, [currentLanguage, t]);
+
+  const fetchIPLocation = useCallback(async () => {
+    try {
+      console.log("Attempting IP-based location fallback...");
+      const res = await fetch('https://ipapi.co/json/');
+      if (!res.ok) throw new Error("IP location service failed");
+      const data = await res.json();
+      if (data.latitude && data.longitude) {
+        console.log("IP Location detected:", data.city, data.latitude, data.longitude);
+        lastCoords.current = { lat: data.latitude, lon: data.longitude };
+        fetchWeatherData(data.latitude, data.longitude, true);
+      }
+    } catch (error) {
+      console.error("IP fallback failed:", error);
+    }
+  }, [fetchWeatherData]);
+
+  const refreshLocation = useCallback(() => {
+    if ("geolocation" in navigator) {
+      console.log("Manual location refresh triggered...");
+      
+      const timeout = setTimeout(() => {
+        console.log("Manual GPS refresh timed out, using IP fallback...");
+        fetchIPLocation();
+      }, 6000);
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          clearTimeout(timeout);
+          const { latitude, longitude } = position.coords;
+          lastCoords.current = { lat: latitude, lon: longitude };
+          fetchWeatherData(latitude, longitude);
+        },
+        (error) => {
+          clearTimeout(timeout);
+          console.warn("Manual GPS refresh error:", error.message);
+          fetchIPLocation();
+        },
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+      );
+    } else {
+      fetchIPLocation();
+    }
+  }, [fetchWeatherData, fetchIPLocation]);
 
   const enableLiveLocation = () => {
     if ("geolocation" in navigator) {
@@ -437,24 +571,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const userRef = doc(db, 'users', user.uid);
         updateDoc(userRef, { 'settings.locationEnabled': true }).catch(e => handleFirestoreError(e, OperationType.UPDATE, path, user));
       }
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          fetchWeatherData(latitude, longitude);
-          
-          // Refresh weather every 5 minutes for "live" feel
-          const interval = setInterval(() => {
-            fetchWeatherData(latitude, longitude);
-          }, 5 * 60 * 1000);
-          
-          setWeatherIntervalId(interval);
-        },
-        (error) => {
-          console.warn("Geolocation error:", error.message);
-          setIsLocationEnabled(false);
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-      );
     }
   };
 
@@ -466,12 +582,83 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const userRef = doc(db, 'users', user.uid);
       updateDoc(userRef, { 'settings.locationEnabled': false }).catch(e => handleFirestoreError(e, OperationType.UPDATE, path, user));
     }
-    if (weatherIntervalId) {
-      clearInterval(weatherIntervalId);
-      setWeatherIntervalId(null);
-    }
-    // Optionally reset sensors to default or keep last known
+    lastCoords.current = null;
   };
+
+  useEffect(() => {
+    let watchId: number | null = null;
+    let intervalId: NodeJS.Timeout | null = null;
+    let fallbackTimeout: NodeJS.Timeout | null = null;
+
+    if (isLocationEnabled && "geolocation" in navigator) {
+      console.log("Location enabled, starting watch...");
+      
+      const handlePosition = (position: GeolocationPosition) => {
+        if (fallbackTimeout) {
+          clearTimeout(fallbackTimeout);
+          fallbackTimeout = null;
+        }
+        const { latitude, longitude } = position.coords;
+        
+        // Only fetch if coordinates changed significantly (approx 100m) or if it's the first fetch
+        const dist = lastCoords.current ? 
+          Math.sqrt(Math.pow(latitude - lastCoords.current.lat, 2) + Math.pow(longitude - lastCoords.current.lon, 2)) : 
+          1;
+
+        if (dist > 0.001 || !lastCoords.current) {
+          lastCoords.current = { lat: latitude, lon: longitude };
+          fetchWeatherData(latitude, longitude);
+        }
+      };
+
+      const handleError = (error: GeolocationPositionError) => {
+        console.warn("Geolocation error:", error.message);
+        // On error, try IP fallback immediately
+        fetchIPLocation();
+      };
+
+      // Set a timeout for GPS. If it doesn't respond in 8 seconds, use IP fallback.
+      fallbackTimeout = setTimeout(() => {
+        if (!lastCoords.current) {
+          console.log("GPS timed out, using IP fallback...");
+          fetchIPLocation();
+        }
+      }, 8000);
+
+      // Immediate fetch
+      navigator.geolocation.getCurrentPosition(
+        handlePosition,
+        handleError,
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+
+      // Watch
+      watchId = navigator.geolocation.watchPosition(
+        handlePosition,
+        handleError,
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+
+      // Still keep a slow interval for weather updates even if stationary
+      intervalId = setInterval(() => {
+        if (lastCoords.current) {
+          fetchWeatherData(lastCoords.current.lat, lastCoords.current.lon);
+        }
+      }, 15 * 60 * 1000); // 15 minutes for weather
+    }
+
+    return () => {
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+      }
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+      if (fallbackTimeout) {
+        clearTimeout(fallbackTimeout);
+      }
+    };
+  }, [isLocationEnabled, fetchWeatherData, fetchIPLocation]);
 
   const reportInfection = async (report: any) => {
     if (!user) return;
@@ -565,13 +752,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         explanation = 'Insufficient light for photosynthesis.';
       }
       
-      // Disease impact (from reports)
-      const localReports = reports.filter(r => r.location === cityName);
-      if (localReports.length > 0) {
-        score -= 15;
-        explanation = 'High disease risk in your neighborhood.';
-      }
-
       setHealthScore(Math.max(0, score));
       
       if (score >= 80) setHealthStatus({ label: 'Excellent', color: 'text-emerald-500', explanation });
@@ -584,14 +764,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const generateSummary = () => {
       const summary = {
         watering: sensors.moisture < 40 ? 'Needs Water' : 'Optimal',
-        disease: reports.length > 0 ? 'Moderate Risk' : 'Low Risk',
         sunlight: sensors.light > 60 ? 'Excellent' : 'Moderate',
         actions: [] as string[]
       };
 
       if (sensors.moisture < 40) summary.actions.push('Water plants within 2 hours');
       if (sensors.temp > 32) summary.actions.push('Provide temporary shade');
-      if (reports.length > 0) summary.actions.push('Inspect leaves for spots');
       if (summary.actions.length === 0) summary.actions.push('Maintain current care routine');
 
       setSmartSummary(summary);
@@ -767,21 +945,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       let body = '';
 
       if (condition.includes('rain')) {
-        title = 'Rain Detected 🌧️';
-        body = 'It started raining! Your plants are getting natural water. No need to water manually.';
-      } else if (condition.includes('sun') || condition.includes('clear')) {
-        title = 'Sunny Day ☀️';
-        body = 'The sun is out! Check your soil moisture as evaporation might increase.';
+        title = t('notif_rain_title');
+        body = t('notif_rain_body');
+      } else if ((condition.includes('sun') || condition.includes('clear')) && sensors.isDay) {
+        title = t('notif_sun_title');
+        body = t('notif_sun_body');
       } else if (condition.includes('thunder')) {
-        title = 'Storm Warning ⛈️';
-        body = 'Thunderstorm detected. Ensure your balcony plants are secure.';
+        title = t('notif_storm_title');
+        body = t('notif_storm_body');
       }
 
       if (title && userData?.settings?.notifications) {
-        // In a real app, we'd use a notification service. 
-        // For this demo, we'll use a local notification simulation.
+        // Add to in-app notifications
+        addInAppNotification(title, body);
+
+        // Browser notification
         if ('Notification' in window && Notification.permission === 'granted') {
-          new Notification(title, { body });
+          try {
+            new Notification(title, { body, icon: 'https://iili.io/qD8Qbig.png' });
+          } catch (e) {
+            console.warn("Browser notification failed:", e);
+          }
         } else {
           console.log(`[Notification Simulation] ${title}: ${body}`);
         }
@@ -792,6 +976,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     setAllPlants(PLANT_DATABASE);
+
+    // Add a welcome notification if it's the first time
+    const hasSeenWelcome = localStorage.getItem('hasSeenWelcomeNotif');
+    if (!hasSeenWelcome && user) {
+      addInAppNotification(
+        t('welcome_notif_title'),
+        t('welcome_notif_body')
+      );
+      localStorage.setItem('hasSeenWelcomeNotif', 'true');
+    }
 
     const currentSuggestions = PLANT_DATABASE.filter(plant => {
       const tempMatch = sensors.temp >= plant.minTemp - 2 && sensors.temp <= plant.maxTemp + 2;
@@ -888,6 +1082,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const deleteMultipleReports = async (reportIds: string[]) => {
+    if (!user) return;
+    const path = 'reports';
+    try {
+      const batch = writeBatch(db);
+      reportIds.forEach(id => {
+        batch.delete(doc(db, 'reports', id));
+      });
+      await batch.commit();
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, path, user);
+    }
+  };
+
   const addToHistory = async (item: { type: 'search' | 'analysis' | 'growth_log' | 'growth_search', title: string, details?: string, image?: string }) => {
     if (!user) return;
     const path = `users/${user.uid}/history`;
@@ -945,8 +1153,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     try {
       // If we have a local match, we can use it as context for translation
+      const targetLanguage = getLanguageName(currentLanguage);
       const prompt = localMatch 
-        ? `Translate the following gardening details for the plant "${localMatch.name}" into the language: ${currentLanguage}.
+        ? `Translate the following gardening details for the plant "${localMatch.name}" into the language: ${targetLanguage}.
            
            Data to translate:
            - Name: ${localMatch.name}
@@ -959,7 +1168,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
            Return the data in the specified JSON format.`
         : `You are a botanical database. Provide definitive gardening details for the plant: ${name}. Include exact temperature and humidity ranges. In the description, provide a factual summary of the plant's weather preference and seasonal requirements. State all information as confirmed facts, avoiding any hedging language like "it appears" or "likely". 
           
-          IMPORTANT: Return all text fields (name, description, growthTime, needs, suitableMonths) in the language: ${currentLanguage}.
+          IMPORTANT: Return all text fields (name, description, growthTime, needs, suitableMonths) in the language: ${targetLanguage}.
           
           Return the data in a specific JSON format.`;
 
@@ -1008,12 +1217,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     <AppContext.Provider value={{ 
       user, userData, loading, isAuthReady, plants, sensors, 
       waterPlant, clearHistory, updateSettings, suggestions, allPlants, searchPlantAI,
-      enableLiveLocation, disableLiveLocation, isLocationEnabled, cityName, fetchWeatherData,
+      enableLiveLocation, disableLiveLocation, isLocationEnabled, cityName, isIPLocation, fetchWeatherData,
+      refreshLocation, fetchIPLocation,
       posts, expenses, history, addPost, deletePost, addExpense, deleteExpense,
-      deleteHistoryItem, deleteMultipleHistoryItems,
+      deleteHistoryItem, deleteMultipleHistoryItems, deleteMultipleReports,
       addToHistory, reports, reportInfection, t, currentLanguage,
       requestNotificationPermission, notificationPermission,
-      healthScore, healthStatus, smartSummary, submitFeedback
+      healthScore, healthStatus, smartSummary, submitFeedback,
+      inAppNotifications, addInAppNotification, markNotificationsAsRead, clearNotifications
     }}>
       {children}
     </AppContext.Provider>

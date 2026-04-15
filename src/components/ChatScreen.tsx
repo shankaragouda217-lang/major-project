@@ -3,8 +3,9 @@ import { useApp } from '../AppContext';
 import { Sparkles, ArrowLeft, Bot, User, Loader2, Send } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Markdown from 'react-markdown';
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { getAIErrorKey } from '../services/geminiService';
+import { getLanguageName } from '../lib/utils';
 
 export default function ChatScreen({ initialQuery, onBack }: { initialQuery: string, onBack: () => void }) {
   const { allPlants, sensors, cityName, currentLanguage, t } = useApp();
@@ -52,20 +53,22 @@ export default function ChatScreen({ initialQuery, onBack }: { initialQuery: str
     );
 
     if (plantMatch && (lowerQuery.includes('how to grow') || lowerQuery.includes('care') || lowerQuery.includes('about'))) {
-      const plantKey = plantMatch.name.toLowerCase().replace(/\s+/g, '_').replace(/\(.*\)/, '').trim();
+      const plantKey = plantMatch.name;
       const expertAdviceHeader = currentLanguage === 'en' 
         ? `${t('expert_advice')} ${t(plantKey)}`
         : `${t(plantKey)} ${t('expert_advice')}`;
-      const localResponse = `### ${expertAdviceHeader}\n\n${t(plantKey + '_desc')}\n\n**${t('growth_cycle')}**: ${plantMatch.growthTime}\n**${t('key_requirements')}**: ${plantMatch.needs}\n**${t('best_months')}**: ${plantMatch.suitableMonths}\n\n*${t('local_database_note')}*`;
+      const localResponse = `### ${expertAdviceHeader}\n\n${t(plantMatch.description)}\n\n**${t('growth_cycle')}**: ${t(plantMatch.growthTime)}\n**${t('key_requirements')}**: ${t(plantMatch.needs)}\n**${t('best_months')}**: ${t(plantMatch.suitableMonths)}\n\n*${t('local_database_note')}*`;
       setMessages(prev => [...prev, { role: 'assistant', content: localResponse }]);
       setIsTyping(false);
       isProcessing.current = false;
       return;
     }
 
+    const targetLanguage = getLanguageName(currentLanguage);
+
     const systemInstruction = `You are a highly experienced professional gardening expert. Provide detailed, factual, and definitive advice on growing plants, fruits, and vegetables. 
     
-    IMPORTANT: Respond ONLY in ${currentLanguage === 'kn' ? 'Kannada' : currentLanguage === 'hi' ? 'Hindi' : currentLanguage === 'ta' ? 'Tamil' : 'English'}.
+    IMPORTANT: Respond ONLY in ${targetLanguage}.
     
     CURRENT CONTEXT:
     - Location: ${cityName || 'Unknown'}
@@ -78,7 +81,7 @@ export default function ChatScreen({ initialQuery, onBack }: { initialQuery: str
 
     if (!process.env.GEMINI_API_KEY) {
       const errorMessage = t('ai_error_api_key');
-      setMessages(prev => [...prev, { role: 'assistant', content: `Sorry, I encountered an error: ${errorMessage}` }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: t('sorry_error', { error: errorMessage }) }]);
       setIsTyping(false);
       isProcessing.current = false;
       return;
@@ -96,13 +99,13 @@ export default function ChatScreen({ initialQuery, onBack }: { initialQuery: str
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
       const streamResponse = await ai.models.generateContentStream({
-        model: "gemini-3-flash-preview",
+        model: "gemini-2.0-flash",
         contents: [
           ...history,
           { role: 'user', parts: [{ text: query }] }
         ],
         config: {
-          systemInstruction: systemInstruction
+          systemInstruction: systemInstruction,
         }
       });
 
@@ -123,7 +126,7 @@ export default function ChatScreen({ initialQuery, onBack }: { initialQuery: str
       
       setMessages(prev => {
         const newMessages = [...prev];
-        newMessages[newMessages.length - 1].content = `Sorry, I encountered an error: ${errorMessage}`;
+        newMessages[newMessages.length - 1].content = t('sorry_error', { error: errorMessage });
         return newMessages;
       });
     }
@@ -138,7 +141,7 @@ export default function ChatScreen({ initialQuery, onBack }: { initialQuery: str
   };
 
   return (
-    <div className="flex flex-col bg-white h-full">
+    <div className="flex flex-col bg-white h-full text-zinc-900 dark:text-zinc-900">
       <header className="p-4 border-b border-zinc-100 flex items-center gap-4 bg-white shrink-0">
         <button onClick={onBack} className="p-2 hover:bg-zinc-100 rounded-full transition-colors">
           <ArrowLeft size={20} />
@@ -224,7 +227,7 @@ export default function ChatScreen({ initialQuery, onBack }: { initialQuery: str
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={t('ask_follow_up')}
-            className="flex-1 bg-zinc-100 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+            className="flex-1 bg-zinc-100 border-none rounded-2xl px-4 py-3 text-sm text-zinc-900 focus:ring-2 focus:ring-emerald-500 outline-none"
             disabled={isTyping}
           />
           <button

@@ -5,7 +5,7 @@ export default function WelcomeScreen({ onStart }: { onStart: () => void }) {
   const { t } = useApp();
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-8 text-center bg-gradient-to-br from-emerald-500 to-green-700 text-white">
+    <div className="flex flex-col items-center justify-center min-h-screen p-8 text-center bg-gradient-to-br from-emerald-50 to-green-50 text-zinc-900">
 
       {/* 🔥 LOGO ANIMATION */}
       <motion.div
@@ -37,7 +37,7 @@ export default function WelcomeScreen({ onStart }: { onStart: () => void }) {
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5 }}
-        className="text-emerald-50 mb-12 max-w-xs"
+        className="text-emerald-800 mb-12 max-w-xs"
       >
         {t('app_subtitle')}
       </motion.p>
@@ -50,7 +50,7 @@ export default function WelcomeScreen({ onStart }: { onStart: () => void }) {
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={onStart}
-        className="bg-white text-emerald-700 font-bold py-4 px-12 rounded-full shadow-lg text-lg"
+        className="bg-emerald-600 text-white font-bold py-4 px-12 rounded-full shadow-lg text-lg"
       >
         {t('get_started')}
       </motion.button>

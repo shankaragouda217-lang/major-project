@@ -3,11 +3,12 @@ import { Calendar, Timer, Leaf, Sparkles, Camera, Upload, Save, Loader2, CheckCi
 import { motion, AnimatePresence } from 'motion/react';
 import { useApp } from '../AppContext';
 import { getGrowthSuggestions, analyzeGrowthFromImage } from '../services/geminiService';
+import { resizeImage } from '../lib/utils';
 
 const COMMON_PLANTS = ['Tulsi', 'Chilli', 'Tomato', 'Curry Leaves', 'Bhindi', 'Palak', 'Marigold', 'Aloe Vera'];
 
 export default function GrowthTrackerScreen() {
-  const { addToHistory, history, deleteHistoryItem, deleteMultipleHistoryItems, clearHistory, currentLanguage, t } = useApp();
+  const { addToHistory, history, deleteHistoryItem, deleteMultipleHistoryItems, clearHistory, currentLanguage, t, allPlants } = useApp();
   const [plantName, setPlantName] = useState('');
   const [harvestDays, setHarvestDays] = useState<number | string>('');
   const [daysPlanted, setDaysPlanted] = useState<number | string>('');
@@ -63,7 +64,7 @@ export default function GrowthTrackerScreen() {
       setError(null);
     } catch (err) {
       console.error("Error accessing camera:", err);
-      setError("Could not access camera. Please check permissions or use the Gallery option.");
+      setError(t('camera_access_error'));
       cameraInputRef.current?.click();
     }
   };
@@ -76,7 +77,7 @@ export default function GrowthTrackerScreen() {
     setIsLiveCamera(false);
   };
 
-  const capturePhoto = () => {
+  const capturePhoto = async () => {
     if (videoRef.current && canvasRef.current) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
@@ -86,9 +87,10 @@ export default function GrowthTrackerScreen() {
       if (ctx) {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         const dataUrl = canvas.toDataURL('image/jpeg');
-        setPlantImage(dataUrl);
+        const resized = await resizeImage(dataUrl);
+        setPlantImage(resized);
         stopCamera();
-        handleAnalyzeGrowth(dataUrl);
+        handleAnalyzeGrowth(resized);
       }
     }
   };
@@ -100,18 +102,38 @@ export default function GrowthTrackerScreen() {
   }, [daysPlanted, harvestDays]);
 
   const daysLeft = useMemo(() => {
+    if (!harvestDays || harvestDays === 0) return null;
     const d = Number(daysPlanted) || 0;
     const h = Number(harvestDays) || 0;
     return Math.max(0, h - d);
   }, [daysPlanted, harvestDays]);
 
+  // Auto-lookup harvest days when plant name changes
+  useEffect(() => {
+    if (!plantName || plantName.length < 2) return;
+    
+    const lowerName = plantName.toLowerCase().trim();
+    const match = allPlants.find(p => 
+      t(p.name).toLowerCase() === lowerName || 
+      p.name.toLowerCase() === lowerName
+    );
+
+    if (match) {
+      const growthStr = t(match.growthTime);
+      const matchNum = growthStr.match(/\d+/);
+      if (matchNum) {
+        setHarvestDays(Number(matchNum[0]));
+      }
+    }
+  }, [plantName, allPlants, t]);
+
   // Calculate harvest date
   const harvestDateStr = useMemo(() => {
-    if (!harvestDays || harvestDays === 0) return 'N/A';
+    if (!harvestDays || harvestDays === 0) return t('not_available');
     const date = new Date();
     date.setDate(date.getDate() + daysLeft);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  }, [daysLeft, harvestDays]);
+    return date.toLocaleDateString(currentLanguage === 'kn' ? 'kn-IN' : currentLanguage === 'hi' ? 'hi-IN' : currentLanguage === 'ta' ? 'ta-IN' : currentLanguage === 'te' ? 'te-IN' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }, [daysLeft, harvestDays, currentLanguage, t]);
 
   const filteredHistory = useMemo(() => {
     return history
@@ -125,10 +147,11 @@ export default function GrowthTrackerScreen() {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => {
+      reader.onloadend = async () => {
         const dataUrl = reader.result as string;
-        setPlantImage(dataUrl);
-        handleAnalyzeGrowth(dataUrl);
+        const resized = await resizeImage(dataUrl);
+        setPlantImage(resized);
+        handleAnalyzeGrowth(resized);
       };
       reader.readAsDataURL(file);
     }
@@ -167,7 +190,7 @@ export default function GrowthTrackerScreen() {
       });
     } catch (err: any) {
       console.error("Growth Analysis Error:", err);
-      const errorMsg = err.message?.startsWith('ai_error_') ? t(err.message) : (err.message || 'Unknown error');
+      const errorMsg = err.message?.startsWith('ai_error_') ? t(err.message) : (err.message || t('unknown_error'));
       setError(`${t('analysis_failed')}: ${errorMsg}`);
     } finally {
       setIsAnalyzing(false);
@@ -217,7 +240,7 @@ export default function GrowthTrackerScreen() {
           days: d,
           progress: Math.round(progress),
           daysLeft: daysLeft,
-          fertilizer: aiAdvice.fertilizer?.substring(0, 50) || 'None'
+          fertilizer: aiAdvice.fertilizer?.substring(0, 50) || t('none')
         }),
         image: plantImage || undefined
       });
@@ -253,7 +276,7 @@ export default function GrowthTrackerScreen() {
   };
 
   return (
-    <div className="p-3 pb-16 max-w-4xl mx-auto">
+    <div className="min-h-screen p-3 pb-32 max-w-4xl mx-auto text-zinc-900 dark:text-zinc-900">
       <header className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-100/50 pb-4">
         <div className="flex-shrink-0">
           <h1 className="text-xl sm:text-2xl font-black text-emerald-950 tracking-tighter uppercase leading-none mb-1 whitespace-nowrap">
@@ -265,13 +288,6 @@ export default function GrowthTrackerScreen() {
           </div>
         </div>
         <div className="flex gap-1.5">
-          <button 
-            onClick={() => document.getElementById('growth-history')?.scrollIntoView({ behavior: 'smooth' })}
-            className="px-2.5 py-1.5 rounded-lg bg-zinc-100 text-zinc-800 hover:bg-zinc-200 transition-all flex items-center gap-1.5 border border-zinc-200"
-          >
-            <HistoryIcon size={12} />
-            <span className="text-[8px] font-black uppercase tracking-widest">{t('history')}</span>
-          </button>
         </div>
       </header>
 
@@ -316,19 +332,23 @@ export default function GrowthTrackerScreen() {
               </div>
 
               <div className="flex flex-wrap gap-1">
-                {COMMON_PLANTS.map(p => (
-                  <button
-                    key={p}
-                    onClick={() => setPlantName(p)}
-                    className={`px-2 py-0.5 rounded-md text-xs font-medium uppercase tracking-normal transition-all ${
-                      plantName === p 
-                        ? 'bg-emerald-950 text-white shadow-sm' 
-                        : 'bg-zinc-100 text-zinc-950 hover:bg-zinc-200'
-                    }`}
-                  >
-                    {p}
-                  </button>
-                ))}
+                {COMMON_PLANTS.map(p => {
+                  const plantKey = p.toLowerCase().replace(/\s+/g, '_');
+                  const translatedName = t(plantKey) !== plantKey ? t(plantKey) : p;
+                  return (
+                    <button
+                      key={p}
+                      onClick={() => setPlantName(translatedName)}
+                      className={`px-2 py-0.5 rounded-md text-xs font-medium uppercase tracking-normal transition-all ${
+                        plantName === translatedName 
+                          ? 'bg-emerald-950 text-white shadow-sm' 
+                          : 'bg-zinc-100 text-zinc-950 hover:bg-zinc-200'
+                      }`}
+                    >
+                      {translatedName}
+                    </button>
+                  );
+                })}
               </div>
 
               <div className="bg-zinc-50 p-3 rounded-xl border border-zinc-100 space-y-4">
@@ -338,7 +358,9 @@ export default function GrowthTrackerScreen() {
                     <span className="text-[8px] font-black text-zinc-950 uppercase tracking-widest">{t('growth_progress')}</span>
                   </div>
                   <div className="flex items-center gap-1 bg-emerald-100 px-2 py-0.5 rounded-full">
-                    <span className="text-[8px] font-black text-emerald-700 uppercase tracking-widest">{daysLeft} {t('days_left')}</span>
+                    <span className="text-[8px] font-black text-emerald-700 uppercase tracking-widest">
+                      {daysLeft !== null ? `${daysLeft} ${t('days_left')}` : t('waiting_for_data')}
+                    </span>
                   </div>
                 </div>
                 
@@ -361,11 +383,10 @@ export default function GrowthTrackerScreen() {
                     <div className="flex items-baseline gap-1">
                       <input 
                         type="text"
-inputMode="numeric" 
+                        readOnly
                         value={harvestDays}
-                        onChange={(e) => setHarvestDays(e.target.value)}
-                        placeholder=""
-                        className="w-20 bg-white px-2 py-1 rounded-lg border border-zinc-200 font-black text-xl text-emerald-950 outline-none focus:border-blue-500 transition-all placeholder:text-zinc-800"
+                        placeholder="--"
+                        className="w-20 bg-zinc-100 px-2 py-1 rounded-lg border border-zinc-200 font-black text-xl text-emerald-900 outline-none cursor-default"
                       />
                       <span className="text-[8px] font-bold text-zinc-950 uppercase">{t('days')}</span>
                     </div>
@@ -470,7 +491,7 @@ inputMode="numeric"
                 <div className="absolute inset-0 bg-emerald-950/80 backdrop-blur-md flex items-center justify-center z-20">
                   <div className="flex flex-col items-center gap-2">
                     <div className="w-8 h-8 border-2 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
-                    <p className="text-emerald-400 font-black text-[8px] uppercase tracking-[0.3em] animate-pulse">Analyzing</p>
+                    <p className="text-emerald-400 font-black text-[8px] uppercase tracking-[0.3em] animate-pulse">{t('analyzing_text')}</p>
                   </div>
                 </div>
               )}
@@ -559,155 +580,6 @@ inputMode="numeric"
             </div>
           </div>
         )}
-      </section>
-
-      {/* History Section */}
-      <section id="growth-history" className="space-y-6">
-        <div className="flex items-center justify-between border-b border-zinc-100 pb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-zinc-100 rounded-xl flex items-center justify-center text-zinc-600">
-              <HistoryIcon size={20} />
-            </div>
-            <div>
-              <h3 className="text-base font-black text-emerald-950 uppercase tracking-tight">{t('growth_archive')}</h3>
-              <p className="text-[9px] font-black text-zinc-950 uppercase tracking-widest">{t('historical_data')}</p>
-            </div>
-          </div>
-          <div className="flex gap-2 items-center">
-            {isSelectionMode ? (
-              <>
-                <button 
-                  onClick={handleDeleteSelected}
-                  disabled={selectedHistoryItems.length === 0}
-                  className="px-3 py-2 bg-rose-500 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-rose-600 transition-all shadow-md shadow-rose-200 disabled:opacity-50"
-                >
-                  {t('delete')} ({selectedHistoryItems.length})
-                </button>
-                <button 
-                  onClick={() => {
-                    setIsSelectionMode(false);
-                    setSelectedHistoryItems([]);
-                  }}
-                  className="px-3 py-2 bg-zinc-100 text-zinc-800 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all border border-zinc-200"
-                >
-                  {t('cancel')}
-                </button>
-              </>
-            ) : (
-              <>
-                <button 
-                  onClick={() => setIsSelectionMode(true)}
-                  className="px-4 py-2 bg-emerald-50 text-emerald-700 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-emerald-100 transition-all border border-emerald-100"
-                >
-                  {t('manage')}
-                </button>
-                {showPurgeConfirm ? (
-                  <div className="flex gap-1 animate-in fade-in slide-in-from-right-2">
-                    <button 
-                      onClick={() => {
-                        handleClearAll();
-                        setShowPurgeConfirm(false);
-                      }}
-                      className="px-3 py-2 bg-rose-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-rose-700 transition-all shadow-md shadow-rose-200"
-                    >
-                      {t('confirm_clear')}
-                    </button>
-                    <button 
-                      onClick={() => setShowPurgeConfirm(false)}
-                      className="px-3 py-2 bg-zinc-100 text-zinc-800 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all border border-zinc-200"
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                ) : (
-                  <button 
-                    onClick={() => setShowPurgeConfirm(true)}
-                    className="px-4 py-2 bg-rose-50 text-rose-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-rose-100 transition-all border border-rose-100"
-                  >
-                    {t('clear_all')}
-                  </button>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-
-        <div className="relative">
-          <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-950" size={18} />
-          <input 
-            type="text"
-            value={historySearch}
-            onChange={(e) => setHistorySearch(e.target.value)}
-            placeholder={t('search_archives')}
-            className="w-full pl-14 pr-5 py-4 bg-white border border-zinc-100 rounded-2xl focus:border-emerald-500 outline-none transition-all font-bold text-emerald-950 text-sm"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {filteredHistory.length > 0 ? (
-            filteredHistory.map((item) => (
-              <motion.div 
-                key={item.id}
-                layout
-                className={`bg-white border rounded-2xl p-4 flex items-center gap-4 group transition-all cursor-pointer ${
-                  selectedHistoryItems.includes(item.id) ? 'border-emerald-500 bg-emerald-50/30' : 'border-zinc-100 hover:border-emerald-200 hover:shadow-lg hover:shadow-emerald-500/5'
-                }`}
-                onClick={() => isSelectionMode && toggleSelection(item.id)}
-              >
-                {isSelectionMode && (
-                  <div className={`w-6 h-6 rounded-full border flex items-center justify-center transition-all flex-shrink-0 ${
-                    selectedHistoryItems.includes(item.id) ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-zinc-200'
-                  }`}>
-                    {selectedHistoryItems.includes(item.id) && <CheckCircle2 size={12} />}
-                  </div>
-                )}
-                
-                {item.image ? (
-                  <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 border border-zinc-50 shadow-sm">
-                    <img src={item.image} alt="Log" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                  </div>
-                ) : (
-                  <div className="w-14 h-14 rounded-xl bg-zinc-50 flex items-center justify-center text-zinc-300 flex-shrink-0 border border-zinc-50">
-                    {item.type === 'growth_search' ? <Search size={24} /> : <Leaf size={24} />}
-                  </div>
-                )}
-                
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h4 className="font-black text-emerald-950 truncate text-sm">{item.title}</h4>
-                  </div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[8px] font-black text-zinc-950 uppercase tracking-widest">
-                      {new Date(item.timestamp).toLocaleDateString()}
-                    </span>
-                    <div className="w-0.5 h-0.5 bg-zinc-200 rounded-full" />
-                    <span className="text-[8px] font-black text-emerald-600 uppercase tracking-widest">
-                      {item.type === 'growth_search' ? 'Search' : 'Log'}
-                    </span>
-                  </div>
-                  <p className="text-[10px] text-zinc-950 font-medium line-clamp-1 leading-relaxed">{item.details}</p>
-                </div>
-
-                {!isSelectionMode && (
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteHistoryItem(item.id);
-                    }}
-                    className="p-2 text-zinc-500 hover:text-rose-500 transition-colors md:opacity-0 md:group-hover:opacity-100"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                )}
-              </motion.div>
-            ))
-          ) : (
-            <div className="col-span-full text-center py-16 bg-zinc-50 rounded-[2rem] border border-dashed border-zinc-200">
-              <HistoryIcon className="mx-auto text-zinc-200 mb-3" size={32} />
-              <p className="text-zinc-800 font-black uppercase tracking-[0.2em] text-xs">{t('archive_empty')}</p>
-            </div>
-          )}
-        </div>
       </section>
 
       {/* Hidden inputs */}

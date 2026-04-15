@@ -42,7 +42,7 @@ export default function CareSuggestionsScreen() {
   };
 
   return (
-    <div className="p-6">
+    <div className="min-h-screen p-6 pb-32">
       <h2 className="text-2xl font-bold text-emerald-900 mb-2">{t('care_suggestions_title')}</h2>
       <p className="text-zinc-700 mb-8">{t('care_suggestions_desc')}</p>
 

@@ -32,7 +32,7 @@ const SettingItem = ({ icon: Icon, label, value, onChange, type = 'toggle' }: an
 export default function SettingsScreen({ onNavigate }: { onNavigate: (s: any) => void }) {
   const { 
     user, userData, history, clearHistory, deleteMultipleHistoryItems, 
-    updateSettings, t, requestNotificationPermission, notificationPermission 
+    updateSettings, t, requestNotificationPermission, notificationPermission
   } = useApp();
   const [showHistory, setShowHistory] = useState(false);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -79,7 +79,7 @@ export default function SettingsScreen({ onNavigate }: { onNavigate: (s: any) =>
   };
 
   return (
-    <div className="p-6 dark:bg-zinc-950 min-h-screen">
+    <div className="p-6 min-h-screen pb-32">
       <h2 className="text-2xl font-bold text-emerald-900 dark:text-emerald-400 mb-8">{t('settings')}</h2>
 
       <div className="flex items-center gap-4 mb-8 p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-3xl">
@@ -93,7 +93,7 @@ export default function SettingsScreen({ onNavigate }: { onNavigate: (s: any) =>
       </div>
 
       <div className="mb-8">
-        <h4 className="text-xs font-bold text-zinc-800 dark:text-zinc-500 uppercase mb-4 px-2">Preferences</h4>
+        <h4 className="text-xs font-bold text-zinc-800 dark:text-zinc-500 uppercase mb-4 px-2">{t('preferences')}</h4>
         <SettingItem 
           icon={Moon} 
           label={t('dark_mode')} 
@@ -119,7 +119,7 @@ export default function SettingsScreen({ onNavigate }: { onNavigate: (s: any) =>
       </div>
 
       <div className="mb-8">
-        <h4 className="text-xs font-bold text-zinc-800 uppercase mb-4 px-2">Activity</h4>
+        <h4 className="text-xs font-bold text-zinc-800 uppercase mb-4 px-2">{t('activity')}</h4>
         <SettingItem 
           icon={History} 
           label={t('garden_history')} 
@@ -129,7 +129,7 @@ export default function SettingsScreen({ onNavigate }: { onNavigate: (s: any) =>
       </div>
 
       <div className="mb-8">
-        <h4 className="text-xs font-bold text-zinc-800 uppercase mb-4 px-2">Account</h4>
+        <h4 className="text-xs font-bold text-zinc-800 uppercase mb-4 px-2">{t('account')}</h4>
         <SettingItem 
           icon={User} 
           label={t('edit_profile')} 
@@ -162,10 +162,10 @@ export default function SettingsScreen({ onNavigate }: { onNavigate: (s: any) =>
         }}
       >
         <p className="text-[10px] text-zinc-800 font-mono uppercase tracking-widest">
-          Garden Intelligence System
+          {t('garden_intelligence_system')}
         </p>
         <p className="text-[10px] text-zinc-700 mt-1">
-          Build: 20260319-v3.0
+          {t('build_version')}: 20260319-v3.0
         </p>
       </div>
 
@@ -241,10 +241,10 @@ export default function SettingsScreen({ onNavigate }: { onNavigate: (s: any) =>
             >
               <div className="flex items-center justify-between mb-6">
                 <div className="flex flex-col">
-                  <h3 className="text-xl font-bold text-zinc-900 dark:text-white">Your History</h3>
+                  <h3 className="text-xl font-bold text-zinc-900 dark:text-white">{t('your_history')}</h3>
                   {history.length > 0 && (
                     <p className="text-[10px] text-zinc-800 font-bold uppercase tracking-widest mt-1">
-                      {history.length} total entries
+                      {t('total_entries', { count: history.length })}
                     </p>
                   )}
                 </div>
@@ -258,7 +258,7 @@ export default function SettingsScreen({ onNavigate }: { onNavigate: (s: any) =>
                             disabled={selectedItems.length === 0}
                             className="px-3 py-1.5 bg-red-100 text-red-600 rounded-xl text-[10px] font-bold hover:bg-red-200 transition-all disabled:opacity-50"
                           >
-                            Delete ({selectedItems.length})
+                            {t('delete_selected', { count: selectedItems.length })}
                           </button>
                           <button 
                             onClick={() => {
@@ -267,7 +267,7 @@ export default function SettingsScreen({ onNavigate }: { onNavigate: (s: any) =>
                             }}
                             className="px-3 py-1.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-950 dark:text-zinc-400 rounded-xl text-[10px] font-bold hover:bg-zinc-200 transition-all"
                           >
-                            Cancel
+                            {t('cancel')}
                           </button>
                         </>
                       ) : (
@@ -276,13 +276,13 @@ export default function SettingsScreen({ onNavigate }: { onNavigate: (s: any) =>
                             onClick={() => setIsSelectionMode(true)}
                             className="px-3 py-1.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-950 dark:text-zinc-400 rounded-xl text-[10px] font-bold hover:bg-zinc-200 transition-all"
                           >
-                            Select
+                            {t('select_btn')}
                           </button>
                           <button 
                             onClick={handleClearHistory}
                             className="px-3 py-1.5 bg-zinc-100 dark:bg-zinc-800 text-red-500 rounded-xl text-[10px] font-bold hover:bg-red-50 transition-all"
                           >
-                            Clear All
+                            {t('clear_all_btn')}
                           </button>
                         </>
                       )}
@@ -307,7 +307,7 @@ export default function SettingsScreen({ onNavigate }: { onNavigate: (s: any) =>
                     <div className="w-16 h-16 bg-zinc-50 dark:bg-zinc-800 rounded-full flex items-center justify-center text-zinc-700 dark:text-zinc-700 mb-4">
                       <History size={32} />
                     </div>
-                    <p className="text-zinc-900 text-sm">No history yet. Start exploring your garden!</p>
+                    <p className="text-zinc-900 text-sm">{t('no_history_msg')}</p>
                   </div>
                 ) : (
                   history.map((item, idx) => (
@@ -370,16 +370,16 @@ export default function SettingsScreen({ onNavigate }: { onNavigate: (s: any) =>
               exit={{ scale: 0.9, opacity: 0 }}
               className="bg-white w-full max-w-sm rounded-[40px] p-8"
             >
-              <h3 className="text-xl font-bold text-zinc-900 mb-6 text-center">Edit Profile</h3>
+              <h3 className="text-xl font-bold text-zinc-900 mb-6 text-center">{t('edit_profile_title')}</h3>
               <div className="space-y-4 mb-8">
                 <div>
-                  <label className="text-[10px] font-bold text-zinc-800 uppercase tracking-widest ml-2 mb-1 block">Display Name</label>
+                  <label className="text-[10px] font-bold text-zinc-800 uppercase tracking-widest ml-2 mb-1 block">{t('display_name_label')}</label>
                   <input 
                     type="text"
                     value={newDisplayName}
                     onChange={(e) => setNewDisplayName(e.target.value)}
-                    className="w-full bg-zinc-50 border border-zinc-100 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    placeholder="Enter your name"
+                    className="w-full bg-zinc-50 border border-zinc-100 rounded-2xl px-4 py-3 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    placeholder={t('enter_name_placeholder')}
                   />
                 </div>
               </div>
@@ -388,13 +388,13 @@ export default function SettingsScreen({ onNavigate }: { onNavigate: (s: any) =>
                   onClick={() => setShowEditProfile(false)}
                   className="flex-1 p-4 bg-zinc-100 text-zinc-950 font-bold rounded-2xl"
                 >
-                  Cancel
+                  {t('cancel')}
                 </button>
                 <button 
                   onClick={handleUpdateProfile}
                   className="flex-1 p-4 bg-emerald-600 text-white font-bold rounded-2xl shadow-lg shadow-emerald-200"
                 >
-                  Save
+                  {t('save_btn')}
                 </button>
               </div>
             </motion.div>

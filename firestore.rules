@@ -90,6 +90,12 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          request.auth.token.email == "shankaragouda217@gmail.com");
+    }
+
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
@@ -199,15 +205,15 @@ service cloud.firestore {
     match /community_posts/{postId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && isValidPost(request.resource.data);
-      allow update: if isAuthenticated() && request.auth.uid == resource.data.authorId && isValidPost(request.resource.data);
-      allow delete: if isAuthenticated() && request.auth.uid == resource.data.authorId;
+      allow update: if isAuthenticated() && (request.auth.uid == resource.data.authorId || isAdmin()) && isValidPost(request.resource.data);
+      allow delete: if isAuthenticated() && (request.auth.uid == resource.data.authorId || isAdmin());
     }
 
     match /reports/{reportId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && isValidReport(request.resource.data);
-      allow update: if isAuthenticated() && request.auth.uid == resource.data.userId && isValidReport(request.resource.data);
-      allow delete: if isAuthenticated() && request.auth.uid == resource.data.userId;
+      allow update: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin()) && isValidReport(request.resource.data);
+      allow delete: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
     }
   }
 }

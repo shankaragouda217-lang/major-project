@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useApp } from '../AppContext';
 import { analyzePlantDisease } from '../services/geminiService';
 import { PlantAnalysisResult } from '../types';
+import { resizeImage } from '../lib/utils';
 
 export default function DiseaseDetectionScreen() {
   const { sensors, addToHistory, t, reportInfection, currentLanguage, submitFeedback } = useApp();
@@ -60,7 +61,7 @@ export default function DiseaseDetectionScreen() {
     setIsLiveCamera(false);
   };
 
-  const capturePhoto = () => {
+  const capturePhoto = async () => {
     if (videoRef.current && canvasRef.current) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
@@ -70,7 +71,8 @@ export default function DiseaseDetectionScreen() {
       if (ctx) {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         const dataUrl = canvas.toDataURL('image/jpeg');
-        setImage(dataUrl);
+        const resized = await resizeImage(dataUrl);
+        setImage(resized);
         stopCamera();
       }
     }
@@ -82,6 +84,10 @@ export default function DiseaseDetectionScreen() {
       case 'Beneficial Insects Found': return t('status_beneficial');
       case 'Pest Infestation': return t('status_pest');
       case 'Infected': return t('status_infected');
+      case 'Leaf Spot': return t('status_leaf_spot');
+      case 'Yellow Leaf': return t('status_yellow_leaf');
+      case 'Fungus': return t('status_fungus');
+      case 'Unknown': return t('status_unknown');
       default: return status;
     }
   };
@@ -122,8 +128,9 @@ export default function DiseaseDetectionScreen() {
 
       const reader = new FileReader();
       setAnalyzing(true);
-      reader.onloadend = () => {
-        setImage(reader.result as string);
+      reader.onloadend = async () => {
+        const resized = await resizeImage(reader.result as string);
+        setImage(resized);
         setResult(null);
         setError(null);
         setAnalyzing(false);
@@ -202,7 +209,7 @@ export default function DiseaseDetectionScreen() {
   };
 
   return (
-    <div className="p-6 pb-24">
+    <div className="min-h-screen p-6 pb-32">
       <h2 className="text-2xl font-bold text-emerald-900 mb-2">{t('disease_scanner_title')}</h2>
       <p className="text-zinc-900 mb-8">{t('disease_scanner_desc')}</p>
 
