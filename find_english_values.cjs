@@ -3,7 +3,7 @@ import fs from 'fs';
 const content = fs.readFileSync('src/translations.ts', 'utf8');
 
 // Basic parser to extract language sections
-const sections: Record<string, Record<string, string>> = {};
+const sections = {};
 let currentLang = '';
 
 const lines = content.split('\n');

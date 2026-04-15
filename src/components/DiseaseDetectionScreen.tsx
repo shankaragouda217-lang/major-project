@@ -7,12 +7,11 @@ import { PlantAnalysisResult } from '../types';
 import { resizeImage } from '../lib/utils';
 
 export default function DiseaseDetectionScreen() {
-  const { sensors, addToHistory, t, reportInfection, currentLanguage, submitFeedback } = useApp();
+  const { sensors, addToHistory, t, reportInfection, currentLanguage } = useApp();
   const [image, setImage] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<any | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
   const [analysisId, setAnalysisId] = useState<string | null>(null);
   const [isReported, setIsReported] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -149,7 +148,6 @@ export default function DiseaseDetectionScreen() {
     setResult(null);
     setError(null);
     setIsReported(false);
-    setFeedbackSubmitted(false);
     try {
       const analysis = await analyzePlantDisease(image, sensors, currentLanguage);
       
@@ -183,13 +181,6 @@ export default function DiseaseDetectionScreen() {
       setError(`${t('analysis_failed')}: ${errorMsg}`);
     } finally {
       setAnalyzing(false);
-    }
-  };
-
-  const handleFeedback = async (worked: boolean) => {
-    if (analysisId) {
-      await submitFeedback(analysisId, worked);
-      setFeedbackSubmitted(true);
     }
   };
 
@@ -443,44 +434,6 @@ export default function DiseaseDetectionScreen() {
               </div>
             </div>
           )}
-
-          {/* Feedback Loop */}
-          <div className="bg-zinc-900 p-8 rounded-[3rem] text-white relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-8 opacity-10">
-              <Sparkles size={80} />
-            </div>
-            <div className="relative z-10">
-              {feedbackSubmitted ? (
-                <div className="text-center py-4">
-                  <div className="w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Sparkles size={24} className="text-white" />
-                  </div>
-                  <h3 className="text-lg font-bold mb-2">{t('feedback_thanks')}</h3>
-                </div>
-              ) : (
-                <>
-                  <h3 className="text-xl font-bold mb-2">{t('did_it_work')}</h3>
-                  <p className="text-zinc-800 text-xs font-medium mb-6 leading-relaxed">
-                    {t('feedback_desc')}
-                  </p>
-                  <div className="flex gap-3">
-                    <button 
-                      onClick={() => handleFeedback(true)}
-                      className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 rounded-2xl transition-all active:scale-95"
-                    >
-                      {t('yes')}
-                    </button>
-                    <button 
-                      onClick={() => handleFeedback(false)}
-                      className="flex-1 bg-white/10 hover:bg-white/20 text-white font-bold py-3.5 rounded-2xl transition-all active:scale-95"
-                    >
-                      {t('no')}
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
 
           {/* Expert Recommendations Section */}
           <div className="space-y-4">

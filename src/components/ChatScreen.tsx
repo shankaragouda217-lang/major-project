@@ -99,7 +99,7 @@ export default function ChatScreen({ initialQuery, onBack }: { initialQuery: str
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
       const streamResponse = await ai.models.generateContentStream({
-        model: "gemini-2.0-flash",
+        model: "gemini-3-flash-preview",
         contents: [
           ...history,
           { role: 'user', parts: [{ text: query }] }

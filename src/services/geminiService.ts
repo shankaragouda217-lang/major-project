@@ -44,27 +44,20 @@ export async function analyzePlantDisease(
     const targetLanguage = getLanguageName(language);
     
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-3-flash-preview",
       contents: [
         {
           parts: [
-            { text: `You are a highly advanced botanical diagnostic system specializing in Indian agriculture and urban gardening. Analyze this plant image and the provided environmental data with absolute precision.
+            { text: `You are a botanical diagnostic expert. Analyze this plant image and environmental data.
             
-            IMPORTANT: You MUST provide the entire response in the following language: ${targetLanguage}.
+            Language: ${targetLanguage}.
             
-            1. Identify the exact plant species and provide a definitive health status.
-            2. Identify any pests (e.g., aphids, spider mites) or beneficial insects (e.g., ladybugs, lacewings) present with certainty.
-            3. Provide a factual explanation of any diseases, pest damage, or issues observed. 
-            4. Provide a deep, detailed analysis of the underlying causes (e.g., nutrient deficiency, overwatering, fungal pathogens).
-            5. Recommend specific fertilizers suitable for the Indian market (e.g., NPK ratios, organic compost, bone meal) and how to apply them.
-            6. Give expert advice on soil health and improvement.
-            7. Use the sensor data to provide confirmed, expert-level care solutions suitable for the Indian climate (e.g., monsoon care, heat protection).
-            8. If pests are found, provide specific, proven organic/non-toxic remedies common in India (e.g., Neem oil, soap water, wood ash).
-            9. Provide a step-by-step action checklist for the user to follow.
+            1. Identify species and health status.
+            2. Identify pests or beneficial insects.
+            3. Explain symptoms and causes.
+            4. Recommend fertilizers and organic remedies common in India.
+            5. Provide a step-by-step action checklist.
             
-            CRITICAL: You MUST provide ALL text fields (plantName, status, description, symptoms, treatment, detailedAnalysis, fertilizerSuggestion, soilAdvice, suggestions, checklist) in the following language: ${targetLanguage}.
-            
-            Avoid using hedging language like "it appears", "possibly", "likely", or "I think". State your findings as confirmed facts.
             ${sensorContext}` },
             {
               inlineData: {
@@ -159,18 +152,16 @@ export async function getGrowthSuggestions(plantName: string, daysPlanted: numbe
   try {
     const targetLanguage = getLanguageName(language);
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: `You are a professional Indian horticulturist with decades of experience in both traditional and urban farming. Provide an extremely deep, expert-level growth analysis and advice for ${plantName} which was planted ${daysPlanted} days ago. 
+      model: "gemini-3-flash-preview",
+      contents: `You are a professional Indian horticulturist. Provide advice for ${plantName} planted ${daysPlanted} days ago. 
       
-      IMPORTANT: You MUST provide the entire response in the following language: ${targetLanguage}.
+      Language: ${targetLanguage}.
       
-      1. Analyze its current growth stage (seedling, vegetative, flowering, etc.) based on the age. Explain the physiological changes happening in the plant right now.
-      2. Provide specific fertilizer recommendations. Mention exact types (e.g., NPK 19:19:19, Vermicompost, Mustard cake, Bone meal, Seaweed extract) and precise dosage/frequency suitable for this age in the Indian climate. Explain WHY these nutrients are needed now.
-      3. Give precise watering instructions, considering the current growth stage and typical Indian weather.
-      4. Identify potential pests, fungal diseases, or physiological disorders common at this specific age and how to prevent them using both organic and integrated pest management (IPM) techniques.
-      5. Estimate the total days to harvest and what signs to look for when it's ready.
-      
-      Be exceptionally detailed, technical, and factual. Avoid hedging. Provide at least 5-6 sentences for each advice category to ensure the user gets a comprehensive guide.`,
+      1. Analyze growth stage.
+      2. Fertilizer recommendations (NPK, Vermicompost, etc.) for Indian climate.
+      3. Watering instructions.
+      4. Common pests/diseases prevention.
+      5. Estimated harvest days.`,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -235,21 +226,19 @@ export async function analyzeGrowthFromImage(
     const targetLanguage = getLanguageName(language);
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-3-flash-preview",
       contents: [
         {
           parts: [
-            { text: `You are a professional Indian horticulturist. Analyze this image of a ${plantName || 'plant'} and provide a detailed growth assessment suitable for Indian urban gardening.
+            { text: `You are a professional Indian horticulturist. Analyze image of ${plantName || 'plant'}.
             
-            IMPORTANT: You MUST provide the entire response in the following language: ${targetLanguage}.
+            Language: ${targetLanguage}.
             
-            1. Identify the plant species (if not provided).
-            2. Determine the current growth stage (e.g., Seedling, Vegetative, Flowering, Fruiting).
-            3. Assess the overall health status.
-            4. Provide 4 specific growth suggestions to optimize its development in the Indian climate.
-            5. Estimate the total number of days from planting to harvest for this specific plant in Indian conditions.
-            
-            Return the result in JSON format. Be very detailed in your suggestions.` },
+            1. Identify species.
+            2. Determine growth stage.
+            3. Assess health status.
+            4. Provide 4 specific suggestions for Indian climate.
+            5. Estimate days to harvest.` },
             {
               inlineData: {
                 mimeType: mimeType,

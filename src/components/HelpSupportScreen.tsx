@@ -39,7 +39,7 @@ export default function HelpSupportScreen({ onBack, onNavigate, onAskAI }: { onB
   const { t, user, userData, currentLanguage } = useApp();
   const [activeGuide, setActiveGuide] = useState<'getting-started' | 'plant-safety' | null>(null);
   const [isLiveChatOpen, setIsLiveChatOpen] = useState(false);
-  const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'ai', text: string, showAIButton?: boolean }>([
+  const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'ai', text: string, showAIButton?: boolean }[]>([
     { role: 'ai', text: t('hello_support') }
   ]);
   const [inputMessage, setInputMessage] = useState('');

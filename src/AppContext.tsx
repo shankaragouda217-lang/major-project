@@ -98,6 +98,9 @@ interface AppContextType {
   disableLiveLocation: () => void;
   isLocationEnabled: boolean;
   cityName: string | null;
+  isIPLocation: boolean;
+  refreshLocation: () => void;
+  fetchIPLocation: () => Promise<void>;
   posts: any[];
   expenses: any[];
   reports: any[];
@@ -118,7 +121,6 @@ interface AppContextType {
   healthScore: number;
   healthStatus: { label: string; color: string; explanation: string };
   smartSummary: { watering: string; sunlight: string; actions: string[] };
-  submitFeedback: (analysisId: string, worked: boolean) => Promise<void>;
   inAppNotifications: { id: string; title: string; body: string; timestamp: number; read: boolean }[];
   addInAppNotification: (title: string, body: string) => void;
   markNotificationsAsRead: () => void;
@@ -387,6 +389,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Helper for fetch with timeout
+  const fetchWithTimeout = async (url: string, options: RequestInit = {}, timeout = 8000) => {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    try {
+      const response = await fetch(url, { ...options, signal: controller.signal });
+      clearTimeout(id);
+      return response;
+    } catch (error) {
+      clearTimeout(id);
+      throw error;
+    }
+  };
+
   // Fetch real weather data
   const fetchWeatherData = useCallback(async (lat: number, lon: number, isFallback = false) => {
     try {
@@ -394,7 +410,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       
       // Fetch weather independently
       try {
-        const weatherRes = await fetch(
+        const weatherRes = await fetchWithTimeout(
           `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,precipitation_probability,relative_humidity_2m,cloud_cover,is_day,weather_code`
         );
         if (!weatherRes.ok) throw new Error(`Weather API error: ${weatherRes.status}`);
@@ -443,34 +459,42 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // Fetch city name independently
       try {
         // Try BigDataCloud first (often faster and more reliable for localities)
-        const bdcRes = await fetch(
-          `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=${currentLanguage}`
-        );
-        
-        if (bdcRes.ok) {
-          const bdcData = await bdcRes.json();
-          if (bdcData.city || bdcData.locality || bdcData.principalSubdivision) {
-            let city = bdcData.city || bdcData.locality || bdcData.principalSubdivision;
-            let area = bdcData.locality || bdcData.neighborhood;
-            
-            // Specific check for Govindaraja Nagar
-            if (area && (area.toLowerCase().includes('govindaraja') || area.toLowerCase().includes('thimmenahalli'))) {
-              area = t("govindaraja_nagar");
+        try {
+          const bdcRes = await fetchWithTimeout(
+            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=${currentLanguage}`,
+            {},
+            5000
+          );
+          
+          if (bdcRes.ok) {
+            const bdcData = await bdcRes.json();
+            if (bdcData.city || bdcData.locality || bdcData.principalSubdivision) {
+              let city = bdcData.city || bdcData.locality || bdcData.principalSubdivision;
+              let area = bdcData.locality || bdcData.neighborhood;
+              
+              // Specific check for Govindaraja Nagar
+              if (area && (area.toLowerCase().includes('govindaraja') || area.toLowerCase().includes('thimmenahalli'))) {
+                area = t("govindaraja_nagar");
+              }
+              
+              if (city.toLowerCase().includes('bagalkot')) city = t("bagalkot");
+              
+              const displayName = (area && area.toLowerCase() !== city.toLowerCase()) ? `${city} (${area})` : city;
+              console.log("Location detected (BDC):", displayName);
+              setCityName(displayName);
+              setIsIPLocation(isFallback);
+              return;
             }
-            
-            if (city.toLowerCase().includes('bagalkot')) city = t("bagalkot");
-            
-            const displayName = (area && area.toLowerCase() !== city.toLowerCase()) ? `${city} (${area})` : city;
-            console.log("Location detected (BDC):", displayName);
-            setCityName(displayName);
-            setIsIPLocation(isFallback);
-            return;
           }
+        } catch (bdcError) {
+          console.warn("BigDataCloud fetch failed, trying Nominatim...", bdcError);
         }
 
         // Fallback to Nominatim
-        const geoRes = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1&accept-language=${currentLanguage}`
+        const geoRes = await fetchWithTimeout(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1&accept-language=${currentLanguage}`,
+          { headers: { 'Accept-Language': currentLanguage } },
+          6000
         );
         if (!geoRes.ok) throw new Error(`Geo API error: ${geoRes.status}`);
         const geoData = await geoRes.json();
@@ -522,16 +546,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const fetchIPLocation = useCallback(async () => {
     try {
       console.log("Attempting IP-based location fallback...");
-      const res = await fetch('https://ipapi.co/json/');
-      if (!res.ok) throw new Error("IP location service failed");
-      const data = await res.json();
-      if (data.latitude && data.longitude) {
-        console.log("IP Location detected:", data.city, data.latitude, data.longitude);
-        lastCoords.current = { lat: data.latitude, lon: data.longitude };
-        fetchWeatherData(data.latitude, data.longitude, true);
+      
+      // Try ipapi.co first
+      try {
+        const res = await fetchWithTimeout('https://ipapi.co/json/', {}, 5000);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.latitude && data.longitude) {
+            console.log("IP Location detected (ipapi.co):", data.city, data.latitude, data.longitude);
+            lastCoords.current = { lat: data.latitude, lon: data.longitude };
+            fetchWeatherData(data.latitude, data.longitude, true);
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn("ipapi.co failed, trying ip-api.com...", e);
+      }
+
+      // Fallback to ip-api.com
+      const res2 = await fetchWithTimeout('http://ip-api.com/json/', {}, 5000);
+      if (res2.ok) {
+        const data = await res2.json();
+        if (data.lat && data.lon) {
+          console.log("IP Location detected (ip-api.com):", data.city, data.lat, data.lon);
+          lastCoords.current = { lat: data.lat, lon: data.lon };
+          fetchWeatherData(data.lat, data.lon, true);
+        }
       }
     } catch (error) {
-      console.error("IP fallback failed:", error);
+      console.error("IP fallback failed completely:", error);
     }
   }, [fetchWeatherData]);
 
@@ -700,27 +743,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       });
     }
   }, [currentLanguage]);
-
-  const submitFeedback = async (analysisId: string, worked: boolean) => {
-    if (!user) return;
-    try {
-      const feedbackRef = collection(db, 'users', user.uid, 'feedback');
-      await addDoc(feedbackRef, {
-        analysisId,
-        worked,
-        timestamp: Date.now()
-      });
-      
-      // Simulate learning by adding a history item
-      await addToHistory({
-        type: 'analysis',
-        title: 'Treatment Feedback',
-        details: `You reported that the suggested treatment ${worked ? 'worked' : 'did not work'}. AI will adjust future advice.`
-      });
-    } catch (error) {
-      console.error("Error submitting feedback:", error);
-    }
-  };
 
   useEffect(() => {
     // Calculate Health Score
@@ -1223,7 +1245,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       deleteHistoryItem, deleteMultipleHistoryItems, deleteMultipleReports,
       addToHistory, reports, reportInfection, t, currentLanguage,
       requestNotificationPermission, notificationPermission,
-      healthScore, healthStatus, smartSummary, submitFeedback,
+      healthScore, healthStatus, smartSummary,
       inAppNotifications, addInAppNotification, markNotificationsAsRead, clearNotifications
     }}>
       {children}
