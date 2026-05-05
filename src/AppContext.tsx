@@ -408,52 +408,69 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log(`Fetching weather for: ${lat}, ${lon} (Fallback: ${isFallback})`);
       
-      // Fetch weather independently
-      try {
-        const weatherRes = await fetchWithTimeout(
-          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,precipitation_probability,relative_humidity_2m,cloud_cover,is_day,weather_code`
-        );
-        if (!weatherRes.ok) throw new Error(`Weather API error: ${weatherRes.status}`);
-        const weatherData = await weatherRes.json();
-        
-        if (weatherData.current) {
-          const code = weatherData.current.weather_code;
-          const isDay = weatherData.current.is_day;
-          const precip = weatherData.current.precipitation_probability || 0;
-          let condition = isDay ? 'Sunny' : 'Clear';
-          
-          // Refined mapping based on Open-Meteo WMO codes
-          if (code >= 95) condition = 'Thunderstorm';
-          else if (code >= 80 || (code >= 60 && precip > 70)) condition = 'Rain Showers';
-          else if (code >= 71) condition = 'Snowy';
-          else if (code >= 61 || (code >= 50 && precip > 40)) condition = 'Rain';
-          else if (code >= 51 || precip > 20) condition = 'Drizzle';
-          else if (code >= 45) condition = 'Foggy';
-          else if (code >= 3) condition = 'Cloudy';
-          else if (code >= 2) condition = 'Partly Cloudy';
-          else if (code >= 1) condition = isDay ? 'Sunny' : 'Clear';
-          else condition = isDay ? 'Sunny' : 'Clear';
+      // Fetch weather independently with retry logic
+      const fetchWeather = async (retries = 2) => {
+        for (let i = 0; i <= retries; i++) {
+          try {
+            const weatherRes = await fetchWithTimeout(
+              `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,precipitation_probability,relative_humidity_2m,cloud_cover,is_day,weather_code`,
+              {},
+              i === 0 ? 5000 : 10000 // Increase timeout on retry
+            );
+            if (!weatherRes.ok) throw new Error(`Weather API error: ${weatherRes.status}`);
+            const weatherData = await weatherRes.json();
+            
+            if (weatherData.current) {
+              const code = weatherData.current.weather_code;
+              const isDay = weatherData.current.is_day;
+              const precip = weatherData.current.precipitation_probability || 0;
+              let condition = isDay ? 'Sunny' : 'Clear';
+              
+              // Refined mapping based on Open-Meteo WMO codes
+              if (code >= 95) condition = 'Thunderstorm';
+              else if (code >= 80 || (code >= 60 && precip > 70)) condition = 'Rain Showers';
+              else if (code >= 71) condition = 'Snowy';
+              else if (code >= 61 || (code >= 50 && precip > 40)) condition = 'Rain';
+              else if (code >= 51 || precip > 20) condition = 'Drizzle';
+              else if (code >= 45) condition = 'Foggy';
+              else if (code >= 3) condition = 'Cloudy';
+              else if (code >= 2) condition = 'Partly Cloudy';
+              else if (code >= 1) condition = isDay ? 'Sunny' : 'Clear';
+              else condition = isDay ? 'Sunny' : 'Clear';
 
-          console.log(`Weather Data: Code=${code}, IsDay=${isDay}, Temp=${weatherData.current.temperature_2m}, Condition=${condition}`);
+              console.log(`Weather Data: Code=${code}, IsDay=${isDay}, Temp=${weatherData.current.temperature_2m}, Condition=${condition}`);
 
-          setSensors(prev => {
-            const next = {
-              ...prev,
-              temp: weatherData.current.temperature_2m,
-              apparentTemp: weatherData.current.apparent_temperature,
-              humidity: weatherData.current.relative_humidity_2m,
-              light: weatherData.current.is_day ? Math.max(10, 100 - weatherData.current.cloud_cover) : 5,
-              condition,
-              isDay: !!weatherData.current.is_day,
-              weatherCode: code,
-              lastUpdated: new Date().toISOString()
-            };
-            localStorage.setItem('sensors', JSON.stringify(next));
-            return next;
-          });
+              setSensors(prev => {
+                const next = {
+                  ...prev,
+                  temp: weatherData.current.temperature_2m,
+                  apparentTemp: weatherData.current.apparent_temperature,
+                  humidity: weatherData.current.relative_humidity_2m,
+                  light: weatherData.current.is_day ? Math.max(10, 100 - weatherData.current.cloud_cover) : 5,
+                  condition,
+                  isDay: !!weatherData.current.is_day,
+                  weatherCode: code,
+                  lastUpdated: new Date().toISOString()
+                };
+                localStorage.setItem('sensors', JSON.stringify(next));
+                return next;
+              });
+              return true; // Success
+            }
+          } catch (err) {
+            console.warn(`Weather fetch attempt ${i + 1} failed:`, err);
+            if (i === retries) throw err;
+            await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); // Exponential backoff
+          }
         }
+        return false;
+      };
+
+      try {
+        await fetchWeather();
       } catch (weatherError) {
-        console.error("Weather fetch failed:", weatherError);
+        console.error("Weather fetch failed after retries:", weatherError);
+        // If it fails, we keep the last known good data from localStorage (already in state)
       }
 
       // Fetch city name independently
